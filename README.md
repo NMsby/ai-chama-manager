@@ -28,7 +28,7 @@ Features predictive analytics, automated governance, and on-chain AI inference.
 ### Installation
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/NMsby/ai-chama-manager.git
 cd ai-chama-manager
 
 # Install dependencies
