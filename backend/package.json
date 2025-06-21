@@ -13,6 +13,11 @@
   },
   "type": "module",
   "workspaces": [
-    "src/backend_frontend"
+    "src/ai_analytics",
+    "src/chama_management",
+    "src/financial_operations",
+    "src/governance",
+    "src/shared",
+    "src/user_management"
   ]
 }
