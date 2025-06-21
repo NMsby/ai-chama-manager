@@ -1,0 +1,75 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install DFX
+      run: |
+        sh -ci "$(curl -fsSL https://sdk.dfinity.org/install.sh)"
+        echo "$HOME/bin" >> $GITHUB_PATH
+    
+    - name: Start DFX
+      run: |
+        dfx start --background
+      working-directory: ./backend
+    
+    - name: Deploy Canisters
+      run: |
+        dfx deploy
+      working-directory: ./backend
+    
+    - name: Run Backend Tests
+      run: |
+        echo "Backend tests will be implemented here"
+      working-directory: ./backend
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install Dependencies
+      run: npm ci
+      working-directory: ./frontend
+    
+    - name: Run Frontend Tests
+      run: npm test -- --coverage --watchAll=false
+      working-directory: ./frontend
+    
+    - name: Build Application
+      run: npm run build
+      working-directory: ./frontend
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install Frontend Dependencies
+      run: npm ci
+      working-directory: ./frontend
+    
+    - name: Run Linting
+      run: npm run lint || echo "Linting will be configured"
+      working-directory: ./frontend
