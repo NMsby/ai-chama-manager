@@ -1,0 +1,46 @@
+{
+  "canisters": {
+    "user_management": {
+      "main": "src/user_management/main.mo",
+      "type": "motoko"
+    },
+    "chama_management": {
+        "main": "src/chama_management/main.mo",
+        "type": "motoko"
+    },
+    "financial_operations": {
+      "main": "src/financial_operations/main.mo",
+      "type": "motoko"
+    },
+    "ai_analytics": {
+      "main": "src/ai_analytics/main.mo",
+      "type": "motoko"
+    },
+    "governance": {
+      "main": "src/governance/main.mo",
+      "type": "motoko"
+    },
+    "internet_identity": {
+      "id": "rdmx6-jaaaa-aaaaa-aaadq-cai",
+      "type": "pull"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    },
+    "ic": {
+      "providers": ["https://icp0.io"],
+      "type": "persistent"
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
