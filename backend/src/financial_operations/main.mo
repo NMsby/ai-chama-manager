@@ -1,4 +1,5 @@
 // Financial Operations Canister
+import Int "mo:base/Int";
 import Types "../shared/types";
 import Debug "mo:base/Debug";
 
