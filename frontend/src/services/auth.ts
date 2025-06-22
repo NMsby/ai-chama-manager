@@ -109,7 +109,7 @@ class AuthService {
         authClient.login({
           identityProvider: process.env.NODE_ENV === 'production' 
             ? 'https://identity.ic0.app' 
-            : `http://localhost:4943?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`,
+            : `http://localhost:4943?canisterId=ucwa4-rx777-77774-qaada-cai&id=rdmx6-jaaaa-aaaaa-aaadq-cai`,
           onSuccess: async () => {
             try {
               // Reset agent to use new identity
