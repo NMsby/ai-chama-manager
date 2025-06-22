@@ -98,23 +98,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Force refresh of auth state
         console.log('Login successful, refreshing auth state...');
 
-        // Get authentication status
-        const authenticated = await authService.isAuthenticated();
-        console.log('Authentication status:', authenticated);
+        // Add retry logic for certificate fetching
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            // Get authentication status
+            const authenticated = await authService.isAuthenticated();
+            console.log('Authentication status:', authenticated);
 
-        if (authenticated) {
-          // Get principal
-          const currentPrincipal = await authService.getCurrentPrincipal();
-          console.log('Current principal:', currentPrincipal?.toString());
-          setPrincipal(currentPrincipal);
+            if (authenticated) {
+              // Get principal
+              const currentPrincipal = await authService.getCurrentPrincipal();
+              console.log('Current principal:', currentPrincipal?.toString());
+              setPrincipal(currentPrincipal);
 
-          // Get user data
-          const currentUser = await authService.getCurrentUser();
-          console.log('Current user:', currentUser);
-          setUser(currentUser);
+              // Get user data
+              const currentUser = await authService.getCurrentUser();
+              console.log('Current user:', currentUser);
+              setUser(currentUser);
 
-          // Set authenticated state - triggers UI update (dashboard)
-          setIsAuthenticated(true);
+              // Set authenticated state - triggers UI update (dashboard)
+              setIsAuthenticated(true);
+              break;
+            }
+          } catch (error: any) {
+            if (error.message?.includes('CertificateOutdated')) {
+              console.log(`Certificate outdated, retrying... (${retries} attempts left)`);
+              retries--;
+              // Wait a bit before retry
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+              throw error;
+            }
+          }
         }
 
         return true;

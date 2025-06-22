@@ -66,22 +66,22 @@ class AuthService {
 
   // Get HTTP Agent
   private async getAgent(): Promise<HttpAgent> {
-    if (!this.agent) {
-      const authClient = await this.initAuth();
-      const identity = authClient.getIdentity();
+    const authClient = await this.initAuth();
+    const identity = authClient.getIdentity();
       
-      this.agent = new HttpAgent({
-        identity,
-        host: process.env.NODE_ENV === 'production' 
-          ? 'https://icp0.io' 
-          : 'http://localhost:4943',
-      });
+    // Create agent with identity
+    this.agent = new HttpAgent({
+      identity,
+      host: process.env.NODE_ENV === 'production' 
+        ? 'https://icp0.io' 
+        : 'http://localhost:4943',
+    });
 
-      // Fetch root key for local development
-      if (process.env.NODE_ENV !== 'production') {
-        await this.agent.fetchRootKey();
-      }
+    // Fetch root key for local development
+    if (process.env.NODE_ENV !== 'production') {
+      await this.agent.fetchRootKey();
     }
+  
     return this.agent;
   }
 
@@ -128,9 +128,15 @@ class AuthService {
             : `http://127.0.0.1:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`,
           onSuccess: async () => {
             try {
-              // Reset agent to use new identity
+              console.log('II Login successful, setting up agent and actors...');
+
+              // Create agent with the authenticated identity
               this.agent = null;
               this.userManagementActor = null;
+
+              // Get agent and user management actor
+              await this.getAgent();
+              await this.getUserManagementActor();
               
               // No backend login call needed for Internet Identity - handles automatically
               resolve(true);
