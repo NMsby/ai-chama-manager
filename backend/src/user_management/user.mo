@@ -285,12 +285,15 @@ module {
       }
     };
 
-    // Search users by name or email
-    public func searchUsers(query: Text) : [User] {
+    // Search users by name or email - FIXED: Changed parameter name from 'query' to 'searchQuery'
+    public func searchUsers(searchQuery: Text) : [User] {
       let allUsers = users.vals() |> Iter.toArray(_);
       Array.filter<User>(allUsers, func(user: User) : Bool {
-        let nameMatch = Text.contains(Text.toLowercase(user.name), #text Text.toLowercase(query));
-        let emailMatch = Text.contains(Text.toLowercase(user.email), #text Text.toLowercase(query));
+        let lowerName = Text.toLowercase(user.name);
+        let lowerEmail = Text.toLowercase(user.email);
+        let lowerQuery = Text.toLowercase(searchQuery);
+        let nameMatch = Text.contains(lowerName, #text lowerQuery);
+        let emailMatch = Text.contains(lowerEmail, #text lowerQuery);
         nameMatch or emailMatch
       })
     };
