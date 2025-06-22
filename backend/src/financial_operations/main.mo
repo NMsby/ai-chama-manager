@@ -1,9 +1,10 @@
-// Enhanced Financial Operations Canister with Data Models
+// Financial Operations Canister with Data Models
 import Types "../shared/types";
 import FinanceDB "../financial_operations/finance";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
+import Nat "mo:base/Nat";
 
 actor FinancialOperations {
   public type Transaction = Types.Transaction;

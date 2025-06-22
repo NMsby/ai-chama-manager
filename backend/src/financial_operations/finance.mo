@@ -9,6 +9,7 @@ import Result "mo:base/Result";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Nat "mo:base/Nat";
+import Int "mo:base/Int";
 
 module {
   public type Transaction = Types.Transaction;
@@ -33,7 +34,7 @@ module {
     // Generate unique transaction ID
     private func generateTransactionId() : TransactionId {
       transactionCounter += 1;
-      "txn_" # Nat.toText(transactionCounter) # "_" # Nat.toText(Time.now())
+      "txn_" # Nat.toText(transactionCounter) # "_" # Int.toText(Time.now())
     };
 
     // Create new transaction
@@ -65,7 +66,7 @@ module {
         metadata = {
           paymentMethod = null;
           reference = null;
-          approvedBy = [];
+          approvedBy = ?[];
           notes = null;
         };
       };
