@@ -1,6 +1,7 @@
 // AI Analytics Canister
 import Types "../shared/types";
 import Debug "mo:base/Debug";
+import Time "mo:base/Time";
 
 actor AIAnalytics {
   public type PredictionResult = Types.PredictionResult;
@@ -12,6 +13,21 @@ actor AIAnalytics {
       confidence = 0.92;
       suggestedAmount = 1000;
       riskLevel = #low;
+      // Placeholder for risk factors
+      factors = [
+        {
+          factor = "Payment history";
+          weight = 0.4;
+          impact = "Positive - consistent payments";
+        },
+        {
+          factor = "Income stability";
+          weight = 0.3;
+          impact = "Positive - stable income pattern";
+        }
+      ];
+      // Placeholder for timestamp
+      timestamp = Time.now();
     }
   };
 

@@ -1,81 +1,68 @@
-// User Management Canister with Authentication
+// User Management Canister
 import Types "../shared/types";
-import Auth "../auth";
+import UserDB "../user_management/user";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
+import Result "mo:base/Result";
+import Array "mo:base/Array";
+import Nat "mo:base/Nat";
 
 actor UserManagement {
   public type User = Types.User;
   public type UserId = Types.UserId;
-  public type AuthResult = Auth.AuthResult;
+  public type UserResult = Types.UserResult;
+  public type UserStats = Types.UserStats;
+  public type UserFilter = Types.UserFilter;
 
-  private let authManager = Auth.AuthManager();
+  private let userDB = UserDB.UserDB();
 
-  // Register a new user
-  public shared(msg) func registerUser(name: Text, email: Text, phone: Text) : async AuthResult {
+  public shared(msg) func registerUser(name: Text, email: Text, phone: Text) : async UserResult {
     let caller = msg.caller;
     Debug.print("Registration request from: " # Principal.toText(caller));
-    authManager.registerUser(caller, name, email, phone)
+    userDB.createUser(caller, name, email, phone)
   };
 
-  // Get current user profile
   public shared(msg) func getMyProfile() : async ?User {
     let caller = msg.caller;
-    if (authManager.isAuthenticated(caller)) {
-      authManager.getUser(caller)
-    } else {
-      null
-    }
+    userDB.getUser(caller)
   };
 
-  // Get user by ID (public view)
   public query func getUserProfile(userId: UserId) : async ?User {
-    authManager.getUser(userId)
+    userDB.getUser(userId)
   };
 
-  // Update user profile
-  public shared(msg) func updateProfile(name: Text, email: Text, phone: Text) : async AuthResult {
+  public shared(msg) func updateProfile(name: Text, email: Text, phone: Text) : async UserResult {
     let caller = msg.caller;
-    if (authManager.isAuthenticated(caller)) {
-      authManager.updateUser(caller, name, email, phone)
-    } else {
-      #err(#NotAuthenticated)
-    }
+    userDB.updateUser(caller, name, email, phone)
   };
 
-  // Verify user
-  public shared(msg) func verifyUser() : async Bool {
+  public shared(msg) func verifyUser(level: Types.VerificationLevel) : async UserResult {
     let caller = msg.caller;
-    authManager.verifyUser(caller)
+    userDB.verifyUser(caller, level)
   };
 
-  // Login (create session)
-  public shared(msg) func login() : async Bool {
+  public shared(msg) func getMyStats() : async ?UserStats {
     let caller = msg.caller;
-    Debug.print("Login attempt from: " # Principal.toText(caller));
-    authManager.createSession(caller)
+    userDB.getUserStats(caller)
   };
 
-  // Logout (end session)
-  public shared(msg) func logout() : async Bool {
-    let caller = msg.caller;
-    Debug.print("Logout request from: " # Principal.toText(caller));
-    authManager.endSession(caller)
+  public query func searchUsers(searchQuery: Text) : async [User] {
+    userDB.searchUsers(searchQuery)
   };
 
-  // Check authentication status
-  public shared(msg) func isAuthenticated() : async Bool {
-    let caller = msg.caller;
-    authManager.isAuthenticated(caller)
+  public query func getAllUsers(filter: ?UserFilter) : async [User] {
+    userDB.getAllUsers(filter)
   };
 
-  // Get all users (for admin purposes)
-  public query func getAllUsers() : async [User] {
-    authManager.getAllUsers()
+  public query func getUserCount() : async Nat {
+    userDB.getUserCount()
   };
 
-  // Health check
+  public func addChamaToUser(userId: UserId, chamaId: Types.ChamaId) : async Bool {
+    userDB.addChamaToUser(userId, chamaId)
+  };
+
   public query func healthCheck() : async Text {
-    "User Management Canister is running successfully!"
+    "User Management Canister with enhanced data models is running successfully! Users: " # Nat.toText(userDB.getUserCount())
   };
 }
