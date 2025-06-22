@@ -1,5 +1,5 @@
 // Main App Component with Authentication
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Login from './components/Login';
@@ -19,6 +19,11 @@ const Loading: React.FC = () => (
 // Main application content
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, logout, user } = useAuth();
+
+  // Add this useEffect for debugging
+  useEffect(() => {
+    console.log('App state changed:', { isAuthenticated, loading, user: !!user });
+  }, [isAuthenticated, loading, user]);
 
   if (loading) {
     return <Loading />;
