@@ -5,7 +5,7 @@ import { Principal } from '@dfinity/principal';
 import { User, AuthState } from '../types/icp';
 
 // Canister IDs (will be populated after deployment)
-const USER_MANAGEMENT_CANISTER_ID = process.env.REACT_APP_USER_MANAGEMENT_CANISTER_ID || 'rrkah-fqaaa-aaaaa-aaaaq-cai';
+const USER_MANAGEMENT_CANISTER_ID = process.env.REACT_APP_USER_MANAGEMENT_CANISTER_ID || 'uxrrr-q7777-77774-qaaaq-cai';
 
 // User Management Actor Interface
 export interface UserManagementActor {
@@ -14,9 +14,6 @@ export interface UserManagementActor {
   getUserProfile: (userId: Principal) => Promise<[] | [User]>;
   updateProfile: (name: string, email: string, phone: string) => Promise<any>;
   verifyUser: () => Promise<boolean>;
-  login: () => Promise<boolean>;
-  logout: () => Promise<boolean>;
-  isAuthenticated: () => Promise<boolean>;
   getAllUsers: () => Promise<User[]>;
   healthCheck: () => Promise<string>;
 }
@@ -46,9 +43,6 @@ const userManagementIdlFactory = ({ IDL }: any) => {
     'getUserProfile' : IDL.Func([UserId], [IDL.Opt(User)], ['query']),
     'updateProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [AuthResult], []),
     'verifyUser' : IDL.Func([], [IDL.Bool], []),
-    'login' : IDL.Func([], [IDL.Bool], []),
-    'logout' : IDL.Func([], [IDL.Bool], []),
-    'isAuthenticated' : IDL.Func([], [IDL.Bool], []),
     'getAllUsers' : IDL.Func([], [IDL.Vec(User)], ['query']),
     'healthCheck' : IDL.Func([], [IDL.Text], ['query']),
   });
@@ -61,30 +55,33 @@ class AuthService {
 
   // Initialize authentication client
   async initAuth(): Promise<AuthClient> {
-    if (!this.authClient) {
-      this.authClient = await AuthClient.create();
-    }
+    // Always create a new AuthClient instance for development
+    this.authClient = await AuthClient.create({
+      idleOptions: {
+        disableIdle: true, // Disable idle timeout for development
+      }
+    });
     return this.authClient;
   }
 
   // Get HTTP Agent
   private async getAgent(): Promise<HttpAgent> {
-    if (!this.agent) {
-      const authClient = await this.initAuth();
-      const identity = authClient.getIdentity();
+    const authClient = await this.initAuth();
+    const identity = authClient.getIdentity();
       
-      this.agent = new HttpAgent({
-        identity,
-        host: process.env.NODE_ENV === 'production' 
-          ? 'https://icp0.io' 
-          : 'http://localhost:4943',
-      });
+    // Create agent with identity
+    this.agent = new HttpAgent({
+      identity,
+      host: process.env.NODE_ENV === 'production' 
+        ? 'https://icp0.io' 
+        : 'http://localhost:4943',
+    });
 
-      // Fetch root key for local development
-      if (process.env.NODE_ENV !== 'production') {
-        await this.agent.fetchRootKey();
-      }
+    // Fetch root key for local development
+    if (process.env.NODE_ENV !== 'production') {
+      await this.agent.fetchRootKey();
     }
+  
     return this.agent;
   }
 
@@ -100,6 +97,25 @@ class AuthService {
     return this.userManagementActor;
   }
 
+  // Reset authentication state
+  async resetAuthState(): Promise<void> {
+    try {
+      // Clear all auth-related state
+      this.authClient = null;
+      this.agent = null;
+      this.userManagementActor = null;
+    
+      // Clear browser storage
+      localStorage.removeItem('ic-identity');
+      localStorage.removeItem('ic-delegation');
+      sessionStorage.clear();
+    
+      console.log('Auth state reset successfully');
+    } catch (error) {
+      console.error('Failed to reset auth state:', error);
+    }
+  }
+
   // Login with Internet Identity
   async login(): Promise<boolean> {
     try {
@@ -109,19 +125,23 @@ class AuthService {
         authClient.login({
           identityProvider: process.env.NODE_ENV === 'production' 
             ? 'https://identity.ic0.app' 
-            : `http://localhost:4943?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`,
+            : `http://127.0.0.1:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`,
           onSuccess: async () => {
             try {
-              // Reset agent to use new identity
+              console.log('II Login successful, setting up agent and actors...');
+
+              // Create agent with the authenticated identity
               this.agent = null;
               this.userManagementActor = null;
+
+              // Get agent and user management actor
+              await this.getAgent();
+              await this.getUserManagementActor();
               
-              // Create session in backend
-              const actor = await this.getUserManagementActor();
-              const loginResult = await actor.login();
-              resolve(loginResult);
+              // No backend login call needed for Internet Identity - handles automatically
+              resolve(true);
             } catch (error) {
-              console.error('Backend login failed:', error);
+              console.error('Post-login setup failed:', error);
               resolve(false);
             }
           },
@@ -142,15 +162,6 @@ class AuthService {
     try {
       const authClient = await this.initAuth();
       
-      // End backend session
-      if (this.userManagementActor) {
-        try {
-          await this.userManagementActor.logout();
-        } catch (error) {
-          console.error('Backend logout failed:', error);
-        }
-      }
-
       // Logout from Internet Identity
       await authClient.logout();
       
@@ -169,15 +180,7 @@ class AuthService {
   async isAuthenticated(): Promise<boolean> {
     try {
       const authClient = await this.initAuth();
-      const isClientAuthenticated = await authClient.isAuthenticated();
-      
-      if (!isClientAuthenticated) {
-        return false;
-      }
-
-      // Check backend authentication
-      const actor = await this.getUserManagementActor();
-      return await actor.isAuthenticated();
+      return await authClient.isAuthenticated();
     } catch (error) {
       console.error('Authentication check failed:', error);
       return false;
