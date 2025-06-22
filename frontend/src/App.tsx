@@ -1,9 +1,10 @@
-// Main App Component with Authentication
+// Main App Component
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Login from './components/Login';
-import UserProfile from './components/UserProfile';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
 import './App.css';
 
 // Loading component
@@ -11,14 +12,29 @@ const Loading: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="text-center">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-      <p className="mt-4 text-gray-600">Loading...</p>
+      <p className="mt-4 text-gray-600">Loading AI Chama Manager...</p>
     </div>
   </div>
 );
 
+// Protected Route Component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <Loading />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 // Main application content
 const AppContent: React.FC = () => {
-  const { isAuthenticated, loading, logout, user } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
   // Add this useEffect for debugging
   useEffect(() => {
@@ -29,52 +45,37 @@ const AppContent: React.FC = () => {
     return <Loading />;
   }
 
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <h1 className="text-xl font-bold text-gray-900">AI Chama Manager</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
-                Welcome, {user?.name || 'User'}
-              </span>
-              <button
-                onClick={logout}
-                className="bg-gray-800 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <Routes>
-            <Route 
-              path="/" 
-              element={
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-                  <UserProfile />
-                </div>
-              } 
-            />
-            <Route path="/profile" element={<UserProfile />} />
-          </Routes>
-        </div>
-      </main>
-    </div>
+    <Routes>
+      <Route 
+        path="/login" 
+        element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} 
+      />  
+      <Route 
+        path="/*" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                {/* Placeholder routes for future pages */}
+                <Route path="/profile" element={<Dashboard />} />
+                <Route path="/chamas" element={<Dashboard />} />
+                <Route path="/chamas/:id" element={<Dashboard />} />
+                <Route path="/transactions" element={<Dashboard />} />
+                <Route path="/loans" element={<Dashboard />} />
+                <Route path="/governance" element={<Dashboard />} />
+                <Route path="/meetings" element={<Dashboard />} />
+                <Route path="/analytics" element={<Dashboard />} />
+                <Route path="/ai-insights" element={<Dashboard />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+    </Routes>
   );
 };
 
