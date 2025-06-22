@@ -16,6 +16,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onLoginError }: LoginProp
     setError(null);
 
     try {
+      // Reset state before login attempt
+      await authService.resetAuthState();
+
+      // Attempt to login using Internet Identity
       const success = await authService.login();
       
       if (success) {
