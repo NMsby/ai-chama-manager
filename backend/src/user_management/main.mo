@@ -1,4 +1,4 @@
-// User Management Canister
+// User Management Canister with Authentication
 import Types "../shared/types";
 import UserDB "../user_management/user";
 import Debug "mo:base/Debug";
