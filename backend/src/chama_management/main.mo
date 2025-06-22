@@ -2,8 +2,9 @@
 import Types "../shared/types";
 import ChamaDB "../chama_management/chama";
 import Debug "mo:base/Debug";
-import Result "mo:base/Result";
 import Principal "mo:base/Principal";
+import Array "mo:base/Array";
+import Nat "mo:base/Nat";
 
 actor ChamaManagement {
   public type Chama = Types.Chama;
@@ -147,8 +148,8 @@ actor ChamaManagement {
   };
 
   // Search chamas
-  public query func searchChamas(query: Text) : async [Chama] {
-    chamaDB.searchChamas(query)
+  public query func searchChamas(searchQuery: Text) : async [Chama] {
+    chamaDB.searchChamas(searchQuery)
   };
 
   // Get chama count

@@ -5,9 +5,9 @@ import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Iter "mo:base/Iter";
 import Array "mo:base/Array";
-import Result "mo:base/Result";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
+import Nat "mo:base/Nat";
 
 module {
     public type Chama = Types.Chama;
@@ -431,11 +431,14 @@ module {
         };
 
         // Search chamas by name
-        public func searchChamas(query: Text) : [Chama] {
+        public func searchChamas(searchQuery: Text) : [Chama] {
             let allChamas = chamas.vals() |> Iter.toArray(_);
             Array.filter<Chama>(allChamas, func(chama: Chama) : Bool {
-                let nameMatch = Text.contains(Text.toLowercase(chama.name), #text Text.toLowercase(query));
-                let descMatch = Text.contains(Text.toLowercase(chama.description), #text Text.toLowercase(query)); 
+                let lowerName = Text.toLowercase(chama.name);
+                let lowerDesc = Text.toLowercase(chama.description);
+                let lowerQuery = Text.toLowercase(searchQuery);
+                let nameMatch = Text.contains(lowerName, #text lowerQuery);
+                let descMatch = Text.contains(lowerDesc, #text lowerQuery); 
                 nameMatch or descMatch
             })
         };
