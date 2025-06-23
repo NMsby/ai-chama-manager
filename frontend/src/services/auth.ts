@@ -136,6 +136,11 @@ class AuthService {
     return await userService.updateProfile(name, email, phone);
   }
 
+  // Verify user  (delegates to userService)
+  async verifyUser(level: VerificationLevel): Promise<User | null> {
+    return await userService.verifyUser(level);
+  }
+
   // Health check
   async healthCheck(): Promise<string> {
     try {
