@@ -1,7 +1,7 @@
 // Authentication hook with Internet Identity and Backend Integration
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { Principal } from '@dfinity/principal';
-import { User, AuthState } from '../types/icp';
+import { User, AuthState, VerificationLevel } from '../types/icp';
 import { authService } from '../services/auth';
 
 interface AuthContextType extends AuthState {
@@ -11,6 +11,7 @@ interface AuthContextType extends AuthState {
   error: string | null;
   registerUser: (name: string, email: string, phone: string) => Promise<User | null>;
   updateProfile: (name: string, email: string, phone: string) => Promise<User | null>;
+  verifyUser: (level: VerificationLevel) => Promise<User | null>;
   refreshUser: () => Promise<void>;
 }
 
@@ -210,6 +211,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const verifyUser = async (level: VerificationLevel): Promise<User | null> => {
+    try {
+      setError(null);
+      // Import userService here to avoid circular dependency
+      const { userService } = await import('../services/userService');
+      const verifiedUser = await userService.verifyUser(level);
+
+      if (verifiedUser) {
+        setUser(verifiedUser);
+      }
+
+      return verifiedUser;
+    } catch (error) {
+      console.error('User verification failed:', error);
+      setError(error instanceof Error ? error.message : 'User verification failed');
+      return null;
+    }
+  };
+
   const refreshUser = async (): Promise<void> => {
     try {
       if (isAuthenticated) {
@@ -231,6 +251,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error,
     registerUser,
     updateProfile,
+    verifyUser,
     refreshUser,
   };
 
