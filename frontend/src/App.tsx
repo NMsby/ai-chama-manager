@@ -4,8 +4,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
+import UserRegistration from './components/UserRegistration';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
+import UserManagement from './pages/UserManagement';
 import './App.css';
 
 // Loading component
@@ -33,11 +35,33 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+// Registration Flow Component
+const RegistrationFlow: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+
+  // Check if user is authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If user exists, redirect to dashboard
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Show registration form for authenticated users without profiles
+  return (
+    <UserRegistration 
+      onRegistrationComplete={()=> window.location.href = '/'} 
+    />
+  );
+}
+
 // Main application content
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, user } = useAuth();
 
-  // Add this useEffect for debugging
+  // useEffect for debugging
   useEffect(() => {
     console.log('App state changed:', { isAuthenticated, loading, user: !!user });
   }, [isAuthenticated, loading, user]);
@@ -51,28 +75,37 @@ const AppContent: React.FC = () => {
       <Route 
         path="/login" 
         element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} 
-      />  
+      />
+      <Route 
+        path="/register" 
+        element={<RegistrationFlow />}  
+      />
       <Route 
         path="/*" 
         element={
           <ProtectedRoute>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                {/* Placeholder routes for future pages */}
-                <Route path="/profile" element={<Dashboard />} />
-                <Route path="/chamas" element={<Dashboard />} />
-                <Route path="/chamas/:id" element={<Dashboard />} />
-                <Route path="/transactions" element={<Dashboard />} />
-                <Route path="/loans" element={<Dashboard />} />
-                <Route path="/governance" element={<Dashboard />} />
-                <Route path="/meetings" element={<Dashboard />} />
-                <Route path="/analytics" element={<Dashboard />} />
-                <Route path="/ai-insights" element={<Dashboard />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Layout>
+            {!user ? (
+              <Navigate to="/register" replace />
+            ) : (
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/profile" element={<UserManagement />} />
+                  <Route path="/users" element={<UserManagement />} />                  
+                  {/* Placeholder routes for future pages */}
+                  <Route path="/chamas" element={<Dashboard />} />
+                  <Route path="/chamas/:id" element={<Dashboard />} />
+                  <Route path="/transactions" element={<Dashboard />} />
+                  <Route path="/loans" element={<Dashboard />} />
+                  <Route path="/governance" element={<Dashboard />} />
+                  <Route path="/meetings" element={<Dashboard />} />
+                  <Route path="/analytics" element={<Dashboard />} />
+                  <Route path="/ai-insights" element={<Dashboard />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Layout>
+            )}
           </ProtectedRoute>
         } 
       />
@@ -80,7 +113,7 @@ const AppContent: React.FC = () => {
   );
 };
 
-// Main App component with Router and AuthProvider
+// Main App component with Router, AuthProvider and ErrorBoundary
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
