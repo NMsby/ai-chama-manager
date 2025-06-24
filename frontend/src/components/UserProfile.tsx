@@ -36,6 +36,16 @@ const UserProfile: React.FC<UserProfileProps> = ({
       try {
         setLoading(true);
 
+        console.log('🔵 UserProfile render state:', {
+          authLoading,
+          loading,
+          currentUser: !!currentUser,
+          user: !!user,
+          userStats: !!userStats,
+          userId,
+          showStats
+        });
+
         if (userId) {
           await loadUserProfile(userId);
         } else if (currentUser) {
