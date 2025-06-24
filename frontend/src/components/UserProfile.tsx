@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { User, UserStats, VerificationLevel } from '../types/icp';
 import { userService } from '../services/userService';
 import { set } from 'date-fns';
+import { Principal } from '@dfinity/principal';
 
 interface UserProfileProps {
   userId?: string; // If provided, shows other user's profile (read-only)
@@ -47,9 +48,12 @@ const UserProfile: React.FC<UserProfileProps> = ({
         });
 
         if (userId) {
+          console.log('🔵 Loading OTHER user profile for ID:', userId);
+          setIsOwnProfile(false);
           await loadUserProfile(userId);
         } else if (currentUser) {
-          console.log('🔵 Loading profile for current user:', currentUser.name)
+          console.log('🔵 Loading profile for current user:', currentUser.name);
+          setIsOwnProfile(true);
           setUser(currentUser);
           updateFormData(currentUser);
 
@@ -66,7 +70,8 @@ const UserProfile: React.FC<UserProfileProps> = ({
           }
         }
       } catch (error) {
-        console.error('Failed to load user profile data:', error);
+        console.error('🔴 Failed to load user profile data:', error);
+        setUser(null);
       } finally {
         setLoading(false); // Ensure loading state is reset
       }
@@ -78,9 +83,27 @@ const UserProfile: React.FC<UserProfileProps> = ({
   const loadUserProfile = async (targetUserId: string) => {
     try {
       setLoading(true);
-      
+      console.log('🔵 Loading profile for user ID:', targetUserId);
+
+      // Convert string back to Principal
+      const principalId = Principal.fromText(targetUserId);
+      console.log('🔵 Converted to Principal:', principalId.toString());
+
+      // Fetch user profile by ID
+      const targetUser = await userService.getUserById(principalId);
+      console.log('🔵 Fetched user:', targetUser);
+
+      if (targetUser) {
+        setUser(targetUser);
+        updateFormData(targetUser);
+        console.log('🟢 User profile loaded successfully');
+      } else {
+        console.log('🟡 No user found for ID:', targetUserId);
+        setUser(null);
+      }      
     } catch (error) {
-      console.error('Failed to load user profile:', error);
+      console.error('🔴 Failed to load user profile:', error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
