@@ -108,8 +108,12 @@ const AppContent: React.FC = () => {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+
+                  {/* User-related routes */}
                   <Route path="/profile" element={<UserManagement />} />
-                  <Route path="/users" element={<UserManagement />} />                  
+                  <Route path="/users" element={<UserManagement />} />
+                  <Route path="/user-management" element={<UserManagement />} />
+                                    
                   {/* Placeholder routes for future pages */}
                   <Route path="/chamas" element={<Dashboard />} />
                   <Route path="/chamas/:id" element={<Dashboard />} />

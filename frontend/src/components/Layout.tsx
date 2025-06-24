@@ -23,6 +23,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             ),
         },
         {
+            name: 'User Management',
+            href: '/users',
+            icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            ),
+        },
+        {
             name: 'My Chamas',
             href: '/chamas',
             icon: (
@@ -208,15 +217,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 <div className="relative">
                                     <div className="flex items-center space-x-3">
                                         <div className="flex-shrink-0">
-                                            <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center">
+                                            <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center hover:bg-indigo-700 transition-color">
                                                 <span className="text-sm font-medium text-white">
                                                     {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="hidden md:block">
-                                            <div className="text-sm font-medium text-gray-700">{user?.name || 'User'}</div>
-                                            <div className="text-sm text-gray-500">{user?.email || ''}</div>
+                                            <Link to="/users" className="hover:text-indigo-600 transition-colors">
+                                                <div className="text-sm font-medium text-gray-700">{user?.name || 'User'}</div>
+                                                <div className="text-sm text-gray-500">{user?.email || ''}</div>
+                                            </Link>
                                         </div>
                                         <button
                                         onClick={logout}
