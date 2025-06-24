@@ -2,118 +2,45 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
-import { User, AuthState } from '../types/icp';
-
-// Canister IDs (will be populated after deployment)
-const USER_MANAGEMENT_CANISTER_ID = process.env.REACT_APP_USER_MANAGEMENT_CANISTER_ID || 'uxrrr-q7777-77774-qaaaq-cai';
-
-// User Management Actor Interface
-export interface UserManagementActor {
-  registerUser: (name: string, email: string, phone: string) => Promise<any>;
-  getMyProfile: () => Promise<[] | [User]>;
-  getUserProfile: (userId: Principal) => Promise<[] | [User]>;
-  updateProfile: (name: string, email: string, phone: string) => Promise<any>;
-  verifyUser: () => Promise<boolean>;
-  getAllUsers: () => Promise<User[]>;
-  healthCheck: () => Promise<string>;
-}
-
-// IDL Factory for User Management (will be auto-generated later)
-const userManagementIdlFactory = ({ IDL }: any) => {
-  const UserId = IDL.Principal;
-  const User = IDL.Record({
-    'id' : UserId,
-    'name' : IDL.Text,
-    'email' : IDL.Text,
-    'phone' : IDL.Text,
-    'createdAt' : IDL.Int,
-    'isVerified' : IDL.Bool,
-  });
-  const AuthError = IDL.Variant({
-    'NotAuthenticated' : IDL.Null,
-    'UserNotFound' : IDL.Null,
-    'InvalidCredentials' : IDL.Null,
-    'AlreadyExists' : IDL.Null,
-  });
-  const AuthResult = IDL.Variant({ 'ok' : User, 'err' : AuthError });
-  
-  return IDL.Service({
-    'registerUser' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [AuthResult], []),
-    'getMyProfile' : IDL.Func([], [IDL.Opt(User)], ['query']),
-    'getUserProfile' : IDL.Func([UserId], [IDL.Opt(User)], ['query']),
-    'updateProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [AuthResult], []),
-    'verifyUser' : IDL.Func([], [IDL.Bool], []),
-    'getAllUsers' : IDL.Func([], [IDL.Vec(User)], ['query']),
-    'healthCheck' : IDL.Func([], [IDL.Text], ['query']),
-  });
-};
+import { User, AuthState, VerificationLevel } from '../types/icp';
+import { userService } from './userService';
 
 class AuthService {
   private authClient: AuthClient | null = null;
-  private userManagementActor: UserManagementActor | null = null;
   private agent: HttpAgent | null = null;
 
   // Initialize authentication client
   async initAuth(): Promise<AuthClient> {
-    // Always create a new AuthClient instance for development
-    this.authClient = await AuthClient.create({
-      idleOptions: {
-        disableIdle: true, // Disable idle timeout for development
-      }
-    });
+    if (!this.authClient) {
+      this.authClient = await AuthClient.create();
+    }
     return this.authClient;
   }
 
   // Get HTTP Agent
-  private async getAgent(): Promise<HttpAgent> {
-    const authClient = await this.initAuth();
-    const identity = authClient.getIdentity();
-      
-    // Create agent with identity
-    this.agent = new HttpAgent({
-      identity,
-      host: process.env.NODE_ENV === 'production' 
-        ? 'https://icp0.io' 
-        : 'http://localhost:4943',
-    });
+  async getAgent(): Promise<HttpAgent> {
+    if (!this.agent) {
+      const authClient = await this.initAuth();
+      const identity = authClient.getIdentity();
+        
+      // Create agent with identity
+      this.agent = new HttpAgent({
+        identity,
+        host: process.env.NODE_ENV === 'production' 
+          ? 'https://icp0.io' 
+          : 'http://localhost:4943',
+      });
 
-    // Fetch root key for local development
-    if (process.env.NODE_ENV !== 'production') {
-      await this.agent.fetchRootKey();
+      // Fetch root key for local development
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          await this.agent.fetchRootKey();
+        } catch (error) {
+          console.warn('Failed to fetch root key:', error);
+        }
+      }
     }
-  
     return this.agent;
-  }
-
-  // Get User Management Actor
-  private async getUserManagementActor(): Promise<UserManagementActor> {
-    if (!this.userManagementActor) {
-      const agent = await this.getAgent();
-      this.userManagementActor = Actor.createActor(userManagementIdlFactory, {
-        agent,
-        canisterId: USER_MANAGEMENT_CANISTER_ID,
-      }) as UserManagementActor;
-    }
-    return this.userManagementActor;
-  }
-
-  // Reset authentication state
-  async resetAuthState(): Promise<void> {
-    try {
-      // Clear all auth-related state
-      this.authClient = null;
-      this.agent = null;
-      this.userManagementActor = null;
-    
-      // Clear browser storage
-      localStorage.removeItem('ic-identity');
-      localStorage.removeItem('ic-delegation');
-      sessionStorage.clear();
-    
-      console.log('Auth state reset successfully');
-    } catch (error) {
-      console.error('Failed to reset auth state:', error);
-    }
   }
 
   // Login with Internet Identity
@@ -130,15 +57,10 @@ class AuthService {
             try {
               console.log('II Login successful, setting up agent and actors...');
 
-              // Create agent with the authenticated identity
+              // Reset agent and user management actor for new identity
               this.agent = null;
-              this.userManagementActor = null;
-
-              // Get agent and user management actor
-              await this.getAgent();
-              await this.getUserManagementActor();
+              userService.resetActor();
               
-              // No backend login call needed for Internet Identity - handles automatically
               resolve(true);
             } catch (error) {
               console.error('Post-login setup failed:', error);
@@ -167,7 +89,7 @@ class AuthService {
       
       // Reset local state
       this.agent = null;
-      this.userManagementActor = null;
+      userService.resetActor();
       
       return true;
     } catch (error) {
@@ -199,63 +121,25 @@ class AuthService {
     }
   }
 
-  // Register new user
+  // Register new user (delegates to userService)
   async registerUser(name: string, email: string, phone: string): Promise<User | null> {
-    try {
-      const actor = await this.getUserManagementActor();
-      const result = await actor.registerUser(name, email, phone);
-      
-      if ('ok' in result) {
-        return result.ok;
-      } else {
-        console.error('Registration failed:', result.err);
-        return null;
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      return null;
-    }
+    return await userService.registerUser(name, email, phone);
   }
 
-  // Get current user profile
+  // Get current user profile (delegates to userService)
   async getCurrentUser(): Promise<User | null> {
-    try {
-      const actor = await this.getUserManagementActor();
-      const result = await actor.getMyProfile();
-      
-      if (result.length > 0 && result[0]) {
-        return result[0];
-      }
-      return null;
-    } catch (error) {
-      console.error('Failed to get current user:', error);
-      return null;
-    }
+    return await userService.getCurrentUser();
   }
 
-  // Update user profile
+  // Update user profile (delegates to userService)
   async updateProfile(name: string, email: string, phone: string): Promise<User | null> {
-    try {
-      const actor = await this.getUserManagementActor();
-      const result = await actor.updateProfile(name, email, phone);
-      
-      if ('ok' in result) {
-        return result.ok;
-      } else {
-        console.error('Profile update failed:', result.err);
-        return null;
-      }
-    } catch (error) {
-      console.error('Profile update error:', error);
-      return null;
-    }
+    return await userService.updateProfile(name, email, phone);
   }
 
   // Health check
   async healthCheck(): Promise<string> {
     try {
-      const actor = await this.getUserManagementActor();
-      return await actor.healthCheck();
+      return await userService.healthCheck();
     } catch (error) {
       console.error('Health check failed:', error);
       return 'Service unavailable';
