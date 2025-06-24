@@ -10,7 +10,7 @@ export interface UserManagementActor {
   getMyProfile: () => Promise<[] | [User]>;
   getUserProfile: (userId: Principal) => Promise<[] | [User]>;
   updateProfile: (name: string, email: string, phone: string) => Promise<{ ok: User } | { err: any }>;
-  verifyUser: (level: VerificationLevel) => Promise<{ ok: User } | { err: any }>;
+  verifyUser: (level: any) => Promise<{ ok: User } | { err: any }>;
   getMyStats: () => Promise<[] | [UserStats]>;
   searchUsers: (query: string) => Promise<User[]>;
   getAllUsers: (filter: [] | [UserFilter]) => Promise<User[]>;
@@ -188,8 +188,11 @@ class UserService {
       console.log('🔵 userService: Getting user management actor...');
       const actor = await this.getUserManagementActor();
 
+      const variantLevel = { [level]: null };
+      console.log('🔵 userService: Sending variant level:', variantLevel);
+
       console.log('🔵 userService: Calling backend verifyUser...');
-      const result = await actor.verifyUser(level);
+      const result = await actor.verifyUser(variantLevel as any);
       console.log('🔵 userService: Backend response:', result);
       
       if ('ok' in result) {
