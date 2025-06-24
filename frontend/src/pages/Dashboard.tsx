@@ -1,5 +1,6 @@
 // Main Dashboard Page
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import UserProfile from '../components/UserProfile';
 import { authService } from '../services/auth';
@@ -13,6 +14,7 @@ interface DashboardStats {
 
 const Dashboard: React.FC = () => {
     const { user, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
     const [stats, setStats] = useState<DashboardStats>({
         totalChamas: 0,
         totalSavings: 0,
@@ -225,7 +227,7 @@ const Dashboard: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         }
-                        onClick={() => window.location.href = '/users'}
+                        onClick={() => navigate('/users')}
                         variant="primary"
                     />
                     <QuickAction
