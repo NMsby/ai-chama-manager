@@ -200,13 +200,26 @@ class UserService {
   // Get user statistics
   async getUserStats(): Promise<UserStats | null> {
     try {
+      console.log('🔵 Getting user management actor...');
       const actor = await this.getUserManagementActor();
-      const result = await actor.getMyStats();
       
-      return result.length > 0 && result[0] !== undefined ? result[0] : null;
+      console.log('🔵 Calling getMyStats()...');
+      const result = await actor.getMyStats();
+
+      console.log('🔵 getMyStats result:', result);
+      console.log('🔵 Result type:', typeof result);
+      console.log('🔵 Result length:', Array.isArray(result) ? result.length : 'Not an array');
+    
+      if (Array.isArray(result) && result.length > 0 && result[0] !== undefined) {
+        console.log('🟢 User stats found:', result[0]);
+        return result[0];
+      } else {
+        console.log('🟡 No user stats found, returning null');
+        return null;
+      }
     } catch (error) {
-      console.error('Failed to get user stats:', error);
-      return null;
+      console.error('🔴 Failed to get user stats:', error);
+      throw error; // Re-throw to be handled by caller
     }
   }
 
@@ -268,14 +281,30 @@ class UserService {
 
   // Helper function to convert error codes to user-friendly messages
   private getErrorMessage(error: any): string {
+    console.log('🔵 Processing error:', error);
+
     if (typeof error === 'object' && error !== null) {
-      if ('NotFound' in error) return 'User not found';
-      if ('AlreadyExists' in error) return 'User already exists';
-      if ('NotAuthorized' in error) return 'Not authorized';
-      if ('InvalidData' in error) return 'Invalid data provided';
-      if ('VerificationRequired' in error) return 'Verification required';
+      if ('NotFound' in error) return 'User profile not found. Please try logging in again.';
+      if ('AlreadyExists' in error) return 'This email address is already registered. Please use a different email or try logging in.';
+      if ('NotAuthorized' in error) return 'You are not authorized to perform this action. Please log in again.';
+      if ('InvalidData' in error) return 'The information provided is invalid. Please check your details and try again.';
+      if ('VerificationRequired' in error) return 'Account verification is required before proceeding.';
     }
-    return 'An unexpected error occurred';
+
+    // Check for network/connection errors
+    if (error instanceof Error) {
+      if (error.message.includes('fetch')) {
+        return 'Network connection failed. Please check your internet connection and try again.';
+      }
+      if (error.message.includes('canister')) {
+        return 'Service temporarily unavailable. Please try again in a few moments.';
+      }
+      if (error.message.includes('Certificate')) {
+        return 'Authentication session expired. Please log in again.';
+      }
+    }
+
+    return `Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`;
   }
 }
 
