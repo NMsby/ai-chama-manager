@@ -147,17 +147,30 @@ const UserProfile: React.FC<UserProfileProps> = ({
   };
 
   const handleVerification = async (level: VerificationLevel) => {
+    console.log(`🔵 Starting ${level} verification...`);
     setIsVerifying(true);
     
     try {
+      console.log(`🔵 Calling verifyUser from useAuth hook...`);
       const verifiedUser = await verifyUser(level);
+      console.log('🔵 verifyUser result:', verifiedUser);
+
       if (verifiedUser) {
+        console.log('🟢 Verification successful, updating user state...');
         setUser(verifiedUser);
         setSuccessMessage(`Account verified at ${level} level!`);
         setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        console.log('🔴 Verification returned null');
+        setSuccessMessage('Verification failed. Please try again.');
+        setTimeout(() => setSuccessMessage(null), 3000);
       }
     } catch (error) {
-      console.error('Verification failed:', error);
+      console.error('🔴 Verification failed:', error);
+      
+      // User-visible error handling
+      setSuccessMessage(`Verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setSuccessMessage(null), 5000);
     } finally {
       setIsVerifying(false);
     }

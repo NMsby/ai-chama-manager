@@ -22,6 +22,8 @@ export interface UserManagementActor {
 // IDL Factory for User Management
 const userManagementIdlFactory = ({ IDL }: any) => {
   const UserId = IDL.Principal;
+
+  // VerificationLevel Enum
   const VerificationLevel = IDL.Variant({
     'basic' : IDL.Null,
     'intermediate' : IDL.Null,
@@ -181,18 +183,38 @@ class UserService {
 
   // Verify user
   async verifyUser(level: VerificationLevel): Promise<User | null> {
+    console.log(`🔵 userService: Starting verification for level: ${level}`);
     try {
+      console.log('🔵 userService: Getting user management actor...');
       const actor = await this.getUserManagementActor();
+
+      console.log('🔵 userService: Calling backend verifyUser...');
       const result = await actor.verifyUser(level);
+      console.log('🔵 userService: Backend response:', result);
       
       if ('ok' in result) {
+        console.log('🟢 userService: Verification successful:', result.ok);
         return result.ok;
       } else {
-        console.error('User verification failed:', result.err);
+        console.error('🔴 userService: Verification failed with error:', result.err);
         throw new Error(this.getErrorMessage(result.err));
       }
     } catch (error) {
-      console.error('User verification error:', error);
+      console.error('🔴 userService: Verification error:', error);
+
+      // Add more detailed error handling
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          throw new Error('Network error: Unable to reach verification service. Please check your connection.');
+        }
+        if (error.message.includes('canister')) {
+          throw new Error('Service unavailable: Verification service is temporarily down. Please try again later.');
+        }
+        if (error.message.includes('Certificate')) {
+          throw new Error('Authentication expired: Please log out and log in again.');
+        }
+      }
+
       throw error;
     }
   }
