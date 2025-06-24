@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { User, UserStats, VerificationLevel } from '../types/icp';
 import { userService } from '../services/userService';
+import { set } from 'date-fns';
 
 interface UserProfileProps {
   userId?: string; // If provided, shows other user's profile (read-only)
@@ -31,25 +32,43 @@ const UserProfile: React.FC<UserProfileProps> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (userId) {
-      loadUserProfile(userId);
-    } else if (currentUser) {
-      setUser(currentUser);
-      updateFormData(currentUser);
-      if (showStats) {
-        loadUserStats();
+    const loadProfileData = async () => {
+      try {
+        setLoading(true);
+
+        if (userId) {
+          await loadUserProfile(userId);
+        } else if (currentUser) {
+          console.log('🔵 Loading profile for current user:', currentUser.name)
+          setUser(currentUser);
+          updateFormData(currentUser);
+
+          if (showStats) {
+            console.log('🔵 Loading user statistics...');
+            try {
+              await loadUserStats();
+              console.log('🟢 User statistics loaded successfully');
+            } catch (error) {
+              console.error('🔴 Failed to load user statistics:', error);
+              // Only fail the profile load if user stats are critical
+              setUserStats(null);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load user profile data:', error);
+      } finally {
+        setLoading(false); // Ensure loading state is reset
       }
-    }
-  }, [userId, currentUser]);
+    };
+
+    loadProfileData();
+  }, [userId, currentUser, showStats]);
 
   const loadUserProfile = async (targetUserId: string) => {
     try {
       setLoading(true);
-      // In a real implementation, convert string to Principal
-      // const principal = Principal.fromText(targetUserId);
-      // const profile = await userService.getUserById(principal);
-      // setUser(profile);
-      // setIsOwnProfile(currentUser?.id.toString() === targetUserId);
+      
     } catch (error) {
       console.error('Failed to load user profile:', error);
     } finally {
@@ -59,10 +78,21 @@ const UserProfile: React.FC<UserProfileProps> = ({
 
   const loadUserStats = async () => {
     try {
+      console.log('🔵 Calling userService.getUserStats()...');
       const stats = await userService.getUserStats();
-      setUserStats(stats);
+      console.log('🔵 getUserStats result:', stats);
+
+      if (stats) {
+        setUserStats(stats);
+        console.log('🟢 User stats set successfully');
+      } else {
+        console.log('🟡 No user stats returned, setting null');
+        setUserStats(null);
+      }
     } catch (error) {
       console.error('Failed to load user stats:', error);
+      setUserStats(null);
+      throw error; // Re-throw to be caught by the outer try-catch
     }
   };
 
