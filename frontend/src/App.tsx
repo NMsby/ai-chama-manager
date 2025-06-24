@@ -66,10 +66,22 @@ const RegistrationFlow: React.FC = () => {
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, user } = useAuth();
 
-  // useEffect for debugging
+  // Log app state changes for debugging
   useEffect(() => {
-    console.log('App state changed:', { isAuthenticated, loading, user: !!user });
+    console.log('App state changed:', { 
+      isAuthenticated, 
+      loading, 
+      user: !!user,
+      userObject: user,
+      currentPath: window.location.pathname,
+      timestamp: new Date().toISOString()
+    });
   }, [isAuthenticated, loading, user]);
+
+  // Log route changes for debugging
+  useEffect(() => {
+    console.log('Route changed:', window.location.pathname);
+  }, [window.location.pathname]);
 
   if (loading) {
     return <Loading />;
