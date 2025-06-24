@@ -1,6 +1,6 @@
 // Main App Component
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
@@ -38,6 +38,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Registration Flow Component
 const RegistrationFlow: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   // Check if user is authenticated
   if (!isAuthenticated) {
@@ -52,7 +53,11 @@ const RegistrationFlow: React.FC = () => {
   // Show registration form for authenticated users without profiles
   return (
     <UserRegistration 
-      onRegistrationComplete={()=> window.location.href = '/'} 
+      onRegistrationComplete={(user) => {
+        console.log('🟢 Registration completed, navigating to dashboard...');
+        // Use React Router navigation instead of page reload
+        navigate('/', { replace: true });
+      }} 
     />
   );
 }
