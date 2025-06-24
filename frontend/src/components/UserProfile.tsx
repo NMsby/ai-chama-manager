@@ -185,6 +185,20 @@ const UserProfile: React.FC<UserProfileProps> = ({
   };
 
   const getVerificationBadge = (user: User) => {
+    // Helper function to convert verification level to string
+    const getVerificationLevelString = (level: any): string => {
+      if (typeof level === 'string') {
+        return level; // Already a string (from initial registration)
+      }
+      if (typeof level === 'object' && level !== null) {
+        // Convert variant object to string
+        if ('basic' in level) return 'basic';
+        if ('intermediate' in level) return 'intermediate';
+        if ('advanced' in level) return 'advanced';
+      }
+      return 'basic'; // fallback
+    };
+
     if (!user.isVerified) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -195,6 +209,9 @@ const UserProfile: React.FC<UserProfileProps> = ({
         </span>
       );
     }
+
+    // Convert verification level to string
+    const levelString = getVerificationLevelString(user.verificationLevel);
 
     const levelColors = {
       basic: 'bg-blue-100 text-blue-800',
@@ -209,9 +226,9 @@ const UserProfile: React.FC<UserProfileProps> = ({
     };
 
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${levelColors[user.verificationLevel]}`}>
-        <span className="mr-1">{levelIcons[user.verificationLevel]}</span>
-        {user.verificationLevel.charAt(0).toUpperCase() + user.verificationLevel.slice(1)} Verified
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${levelColors[levelString as keyof typeof levelColors]}`}>
+        <span className="mr-1">{levelIcons[levelString as keyof typeof levelIcons]}</span>
+        {levelString.charAt(0).toUpperCase() + levelString.slice(1)} Verified
       </span>
     );
   };
