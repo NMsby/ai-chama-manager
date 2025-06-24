@@ -92,7 +92,9 @@ module {
                   usersByEmail.put(email, id);
                   usersByPhone.put(phone, id);
 
-                  Debug.print("User created successfully");
+                  // Debug logging 
+                  Debug.print("User stats created: " # debug_show(stats));
+                  Debug.print("User stats created successfully:");
                   #ok(newUser)
                 };
               };
