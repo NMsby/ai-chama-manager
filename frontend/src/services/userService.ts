@@ -95,7 +95,7 @@ class UserService {
   private async getUserManagementActor(): Promise<UserManagementActor> {
     if (!this.userManagementActor) {
       const agent = await authService.getAgent();
-      const canisterId = process.env.REACT_APP_USER_MANAGEMENT_CANISTER_ID || 'uxrrr-q7777-77774-qaaaq-cai';
+      const canisterId = process.env.REACT_APP_USER_MANAGEMENT_CANISTER_ID || 'ulvla-h7777-77774-qaacq-cai';
       
       this.userManagementActor = Actor.createActor(userManagementIdlFactory, {
         agent,
