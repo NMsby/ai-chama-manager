@@ -587,13 +587,18 @@ module {
     chamaId: ?ChamaId;
   };
 
+  public type ContributionRange = {
+    min: Nat;
+    max: Nat;
+  };
+
   public type ChamaFilter = {
     chamaType: ?ChamaType;
     status: ?ChamaStatus;
     isPublic: ?Bool;
     minMembers: ?Nat;
     maxMembers: ?Nat;
-    contributionRange: ?(Nat, Nat);
+    contributionRange: ?ContributionRange;
   };
 
   public type TransactionFilter = {

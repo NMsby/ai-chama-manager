@@ -937,8 +937,8 @@ module {
 
                         let contributionMatch = switch (f.contributionRange) {
                             case null { true };
-                            case (?(min, max)) {
-                                chama.contributionAmount >= min and chama.contributionAmount <= max
+                            case (?range) {
+                                chama.contributionAmount >= range.min and chama.contributionAmount <= range.max
                             };
                         };
 
