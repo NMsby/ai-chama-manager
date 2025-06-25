@@ -1,6 +1,6 @@
 // Main App Component
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
@@ -38,6 +38,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Registration Flow Component
 const RegistrationFlow: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   // Check if user is authenticated
   if (!isAuthenticated) {
@@ -52,7 +53,11 @@ const RegistrationFlow: React.FC = () => {
   // Show registration form for authenticated users without profiles
   return (
     <UserRegistration 
-      onRegistrationComplete={()=> window.location.href = '/'} 
+      onRegistrationComplete={(user) => {
+        console.log('🟢 Registration completed, navigating to dashboard...');
+        // Use React Router navigation instead of page reload
+        navigate('/', { replace: true });
+      }} 
     />
   );
 }
@@ -61,10 +66,22 @@ const RegistrationFlow: React.FC = () => {
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, user } = useAuth();
 
-  // useEffect for debugging
+  // Log app state changes for debugging
   useEffect(() => {
-    console.log('App state changed:', { isAuthenticated, loading, user: !!user });
+    console.log('App state changed:', { 
+      isAuthenticated, 
+      loading, 
+      user: !!user,
+      userObject: user,
+      currentPath: window.location.pathname,
+      timestamp: new Date().toISOString()
+    });
   }, [isAuthenticated, loading, user]);
+
+  // Log route changes for debugging
+  useEffect(() => {
+    console.log('Route changed:', window.location.pathname);
+  }, [window.location.pathname]);
 
   if (loading) {
     return <Loading />;
@@ -91,8 +108,12 @@ const AppContent: React.FC = () => {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+
+                  {/* User-related routes */}
                   <Route path="/profile" element={<UserManagement />} />
-                  <Route path="/users" element={<UserManagement />} />                  
+                  <Route path="/users" element={<UserManagement />} />
+                  <Route path="/user-management" element={<UserManagement />} />
+                                    
                   {/* Placeholder routes for future pages */}
                   <Route path="/chamas" element={<Dashboard />} />
                   <Route path="/chamas/:id" element={<Dashboard />} />

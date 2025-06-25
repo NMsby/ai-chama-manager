@@ -62,7 +62,21 @@ const UserSearch: React.FC<UserSearchProps> = ({
         }
         
         if (filters.verificationLevel) {
-            filtered = filtered.filter(user => user.verificationLevel === filters.verificationLevel);
+            // Function to convert verification level to string
+            filtered = filtered.filter(user => {
+                const getVerificationLevelString = (level: any): string => {
+                    if (typeof level === 'string') return level;
+                    if (typeof level === 'object' && level !== null) {
+                        if ('basic' in level) return 'basic';
+                        if ('intermediate' in level) return 'intermediate';
+                        if ('advanced' in level) return 'advanced';
+                    }
+                    return 'basic';
+                };
+            
+                const userLevelString = getVerificationLevelString(user.verificationLevel);
+                return userLevelString === filters.verificationLevel;
+            });
         }
 
         if (filters.minCreditScore !== undefined) {
@@ -107,11 +121,28 @@ const UserSearch: React.FC<UserSearchProps> = ({
     };
 
     const getVerificationBadge = (user: User) => {
+        // Function to convert verification level to string
+        const getVerificationLevelString = (level: any): string => {
+            if (typeof level === 'string') {
+                return level; // Already a string (from initial registration)
+            }
+            if (typeof level === 'object' && level !== null) {
+                // Convert variant object to string
+                if ('basic' in level) return 'basic';
+                if ('intermediate' in level) return 'intermediate';
+                if ('advanced' in level) return 'advanced';
+            }
+            return 'basic'; // fallback
+        };
+
         if (!user.isVerified) {
             return <span className="badge badge-warning">Unverified</span>;
         }
 
-        switch (user.verificationLevel) {
+        // Convert verification level to string
+        const levelString = getVerificationLevelString(user.verificationLevel);
+
+        switch (levelString) {
             case 'basic':
                 return <span className="badge badge-primary">Basic</span>;
             case 'intermediate':

@@ -4,6 +4,8 @@ import { Actor, HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 import { User, AuthState, VerificationLevel } from '../types/icp';
 import { userService } from './userService';
+import { chamaService } from './chamaService';
+import { financialService } from './financialService';
 
 class AuthService {
   private authClient: AuthClient | null = null;
@@ -59,7 +61,7 @@ class AuthService {
 
               // Reset agent and user management actor for new identity
               this.agent = null;
-              userService.resetActor();
+              this.resetAllServiceActors();
               
               resolve(true);
             } catch (error) {
@@ -89,12 +91,30 @@ class AuthService {
       
       // Reset local state
       this.agent = null;
-      userService.resetActor();
+
+      //Reset all service actors
+      this.resetAllServiceActors();
       
       return true;
     } catch (error) {
       console.error('Logout failed:', error);
       return false;
+    }
+  }
+
+  // Reset all service actors
+  private async resetAllServiceActors() {
+    try {
+      // Reset agent
+      userService.resetActor();
+
+      // Reset chama service actor
+      chamaService.resetActor();
+
+      // Reset financial service actor
+      financialService.resetActor();
+    } catch (error) {
+      console.error('Failed to reset service actors:', error);
     }
   }
 

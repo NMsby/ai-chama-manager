@@ -36,6 +36,7 @@ actor UserManagement {
     userDB.updateUser(caller, name, email, phone)
   };
 
+  // Verification process
   public shared(msg) func verifyUser(level: Types.VerificationLevel) : async UserResult {
     let caller = msg.caller;
     userDB.verifyUser(caller, level)

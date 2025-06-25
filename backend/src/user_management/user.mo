@@ -92,7 +92,9 @@ module {
                   usersByEmail.put(email, id);
                   usersByPhone.put(phone, id);
 
-                  Debug.print("User created successfully");
+                  // Debug logging 
+                  Debug.print("User stats created: " # debug_show(stats));
+                  Debug.print("User stats created successfully:");
                   #ok(newUser)
                 };
               };
@@ -180,11 +182,16 @@ module {
 
     // Verify user
     public func verifyUser(id: UserId, level: Types.VerificationLevel) : UserResult {
+      Debug.print("🔵 Backend: Starting verification for user: " # Principal.toText(id) # " level: " # debug_show(level));
+
       switch (users.get(id)) {
         case null {
+          Debug.print("🔴 Backend: User not found for verification: " # Principal.toText(id));
           #err(#NotFound)
         };
         case (?existingUser) {
+          Debug.print("🔵 Backend: User found, creating verified user...");
+          
           let verifiedUser: User = {
             id = existingUser.id;
             name = existingUser.name;
@@ -204,6 +211,7 @@ module {
           };
 
           users.put(id, verifiedUser);
+          Debug.print("🟢 Backend: User verification successful for: " # Principal.toText(id));
           #ok(verifiedUser)
         };
       };

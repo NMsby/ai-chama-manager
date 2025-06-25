@@ -13,6 +13,7 @@ interface AuthContextType extends AuthState {
   updateProfile: (name: string, email: string, phone: string) => Promise<User | null>;
   verifyUser: (level: VerificationLevel) => Promise<User | null>;
   refreshUser: () => Promise<void>;
+  completeRegistration: () => void; 
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -35,6 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [principal, setPrincipal] = useState<Principal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Initialize authentication state
   useEffect(() => {
@@ -43,29 +45,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Handle window focus to check authentication status
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const handleWindowFocus = async () => {
-      // Check if authentiction completed after window regains focus
-      if (!isAuthenticated && !loading) {
-        console.log('Window focused, checking auth status...');
-        const authenticated = await authService.isAuthenticated();
-        if (authenticated) {
-          console.log('Authentication detected after focus, updating state...');
-          await initializeAuth();
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        // Check if authentiction completed after window regains focus
+        if (!isAuthenticated && !loading && !isRegistering) {
+          console.log('Window focused, checking auth status...');
+          try {
+            const authenticated = await authService.isAuthenticated();
+            if (authenticated) {
+              console.log('Authentication detected after focus, updating state...');
+              await initializeAuth();
+            }
+          } catch (error) {
+            console.error('Focus auth check failed:', error);
+          }
         }
-      }
+      }, 500); // Delay to avoid immediate re-checking
     };
 
     window.addEventListener('focus', handleWindowFocus);
-    return () => window.removeEventListener('focus', handleWindowFocus);
-  }, [isAuthenticated, loading]);
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      clearTimeout(timeoutId);
+    }
+  }, [isAuthenticated, loading, isRegistering]);
 
   const initializeAuth = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      console.log('🔵 Initializing authentication...');
+
+      // Check if registration is in progress
+      if (isRegistering) {
+        console.log('🟡 Skipping auth initialization - registration in progress');
+        setLoading(false);
+        return;
+      }
+
       // Check if user is authenticated
       const authenticated = await authService.isAuthenticated();
+      console.log('Authentication check result:', authenticated);
       setIsAuthenticated(authenticated);
 
       if (authenticated) {
@@ -73,8 +97,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const currentPrincipal = await authService.getCurrentPrincipal();
         setPrincipal(currentPrincipal);
 
-        // Get user data
-        const currentUser = await authService.getCurrentUser();
+        // Get user data with retry logic
+        const currentUser = await getUserWithRetry();
         setUser(currentUser);
       }
     } catch (error) {
@@ -86,6 +110,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Retry logic for fetching user data
+  const getUserWithRetry = async (maxRetries = 3): Promise<User | null> => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        if (currentUser) {
+          return currentUser;
+        }
+        
+        if (i < maxRetries - 1) {
+          console.log(`🟡 User not found, retrying... (${i + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        }
+      } catch (error) {
+        console.error(`User fetch attempt ${i + 1} failed:`, error);
+        if (i === maxRetries - 1) throw error;
+      }
+    }
+    return null;
+  };
+
+  const registerUser = async (name: string, email: string, phone: string): Promise<User | null> => {
+    console.log('🔵 Starting registration...');    
+    try {
+      setError(null);
+      setIsRegistering(true); // Set registration state to true
+
+      const newUser = await authService.registerUser(name, email, phone);
+      console.log('🟢 Registration successful:', newUser);
+
+      if (newUser) {
+        setUser(newUser);
+        setIsAuthenticated(true);
+        console.log('🟢 Auth state updated')
+      }
+     
+      return newUser;
+    } catch (error) {
+      console.log('🔴 Registration error:', error);
+      console.error('Registration failed:', error);
+      setError(error instanceof Error ? error.message : 'Registration failed');
+      return null;
+    } finally {
+      setIsRegistering(false); // Clear registration state
+    }
+  };
+
+  // Function to complete registration process
+  const completeRegistration = () => {
+    setIsRegistering(false);
+    console.log('🟢 Registration completed');
   };
 
   const login = async (): Promise<boolean> => {
@@ -176,24 +253,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const registerUser = async (name: string, email: string, phone: string): Promise<User | null> => {
-    try {
-      setError(null);
-      const newUser = await authService.registerUser(name, email, phone);
-     
-      if (newUser) {
-        setUser(newUser);
-        setIsAuthenticated(true);
-      }
-     
-      return newUser;
-    } catch (error) {
-      console.error('Registration failed:', error);
-      setError(error instanceof Error ? error.message : 'Registration failed');
-      return null;
-    }
-  };
-
   const updateProfile = async (name: string, email: string, phone: string): Promise<User | null> => {
     try {
       setError(null);
@@ -253,6 +312,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateProfile,
     verifyUser,
     refreshUser,
+    completeRegistration,
   };
 
   return (

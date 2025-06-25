@@ -10,7 +10,7 @@ export interface UserManagementActor {
   getMyProfile: () => Promise<[] | [User]>;
   getUserProfile: (userId: Principal) => Promise<[] | [User]>;
   updateProfile: (name: string, email: string, phone: string) => Promise<{ ok: User } | { err: any }>;
-  verifyUser: (level: VerificationLevel) => Promise<{ ok: User } | { err: any }>;
+  verifyUser: (level: any) => Promise<{ ok: User } | { err: any }>;
   getMyStats: () => Promise<[] | [UserStats]>;
   searchUsers: (query: string) => Promise<User[]>;
   getAllUsers: (filter: [] | [UserFilter]) => Promise<User[]>;
@@ -22,6 +22,8 @@ export interface UserManagementActor {
 // IDL Factory for User Management
 const userManagementIdlFactory = ({ IDL }: any) => {
   const UserId = IDL.Principal;
+
+  // VerificationLevel Enum
   const VerificationLevel = IDL.Variant({
     'basic' : IDL.Null,
     'intermediate' : IDL.Null,
@@ -95,7 +97,7 @@ class UserService {
   private async getUserManagementActor(): Promise<UserManagementActor> {
     if (!this.userManagementActor) {
       const agent = await authService.getAgent();
-      const canisterId = process.env.REACT_APP_USER_MANAGEMENT_CANISTER_ID || 'uxrrr-q7777-77774-qaaaq-cai';
+      const canisterId = process.env.REACT_APP_USER_MANAGEMENT_CANISTER_ID || 'ulvla-h7777-77774-qaacq-cai';
       
       this.userManagementActor = Actor.createActor(userManagementIdlFactory, {
         agent,
@@ -181,18 +183,41 @@ class UserService {
 
   // Verify user
   async verifyUser(level: VerificationLevel): Promise<User | null> {
+    console.log(`🔵 userService: Starting verification for level: ${level}`);
     try {
+      console.log('🔵 userService: Getting user management actor...');
       const actor = await this.getUserManagementActor();
-      const result = await actor.verifyUser(level);
+
+      const variantLevel = { [level]: null };
+      console.log('🔵 userService: Sending variant level:', variantLevel);
+
+      console.log('🔵 userService: Calling backend verifyUser...');
+      const result = await actor.verifyUser(variantLevel as any);
+      console.log('🔵 userService: Backend response:', result);
       
       if ('ok' in result) {
+        console.log('🟢 userService: Verification successful:', result.ok);
         return result.ok;
       } else {
-        console.error('User verification failed:', result.err);
+        console.error('🔴 userService: Verification failed with error:', result.err);
         throw new Error(this.getErrorMessage(result.err));
       }
     } catch (error) {
-      console.error('User verification error:', error);
+      console.error('🔴 userService: Verification error:', error);
+
+      // Add more detailed error handling
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          throw new Error('Network error: Unable to reach verification service. Please check your connection.');
+        }
+        if (error.message.includes('canister')) {
+          throw new Error('Service unavailable: Verification service is temporarily down. Please try again later.');
+        }
+        if (error.message.includes('Certificate')) {
+          throw new Error('Authentication expired: Please log out and log in again.');
+        }
+      }
+
       throw error;
     }
   }
@@ -200,13 +225,26 @@ class UserService {
   // Get user statistics
   async getUserStats(): Promise<UserStats | null> {
     try {
+      console.log('🔵 Getting user management actor...');
       const actor = await this.getUserManagementActor();
-      const result = await actor.getMyStats();
       
-      return result.length > 0 && result[0] !== undefined ? result[0] : null;
+      console.log('🔵 Calling getMyStats()...');
+      const result = await actor.getMyStats();
+
+      console.log('🔵 getMyStats result:', result);
+      console.log('🔵 Result type:', typeof result);
+      console.log('🔵 Result length:', Array.isArray(result) ? result.length : 'Not an array');
+    
+      if (Array.isArray(result) && result.length > 0 && result[0] !== undefined) {
+        console.log('🟢 User stats found:', result[0]);
+        return result[0];
+      } else {
+        console.log('🟡 No user stats found, returning null');
+        return null;
+      }
     } catch (error) {
-      console.error('Failed to get user stats:', error);
-      return null;
+      console.error('🔴 Failed to get user stats:', error);
+      throw error; // Re-throw to be handled by caller
     }
   }
 
@@ -268,14 +306,30 @@ class UserService {
 
   // Helper function to convert error codes to user-friendly messages
   private getErrorMessage(error: any): string {
+    console.log('🔵 Processing error:', error);
+
     if (typeof error === 'object' && error !== null) {
-      if ('NotFound' in error) return 'User not found';
-      if ('AlreadyExists' in error) return 'User already exists';
-      if ('NotAuthorized' in error) return 'Not authorized';
-      if ('InvalidData' in error) return 'Invalid data provided';
-      if ('VerificationRequired' in error) return 'Verification required';
+      if ('NotFound' in error) return 'User profile not found. Please try logging in again.';
+      if ('AlreadyExists' in error) return 'This email address is already registered. Please use a different email or try logging in.';
+      if ('NotAuthorized' in error) return 'You are not authorized to perform this action. Please log in again.';
+      if ('InvalidData' in error) return 'The information provided is invalid. Please check your details and try again.';
+      if ('VerificationRequired' in error) return 'Account verification is required before proceeding.';
     }
-    return 'An unexpected error occurred';
+
+    // Check for network/connection errors
+    if (error instanceof Error) {
+      if (error.message.includes('fetch')) {
+        return 'Network connection failed. Please check your internet connection and try again.';
+      }
+      if (error.message.includes('canister')) {
+        return 'Service temporarily unavailable. Please try again in a few moments.';
+      }
+      if (error.message.includes('Certificate')) {
+        return 'Authentication session expired. Please log in again.';
+      }
+    }
+
+    return `Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`;
   }
 }
 

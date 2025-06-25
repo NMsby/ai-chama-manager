@@ -209,7 +209,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
                       )}
                       {member.missedContributions > 0n && (
                         <span className="text-yellow-600">
-                          Missed: {Number(member.missedContributions)} payments
+                          Missed: {member.missedContributions.toString()} payments
                         </span>
                       )}
                     </div>
@@ -248,7 +248,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
               </div>
 
               {/* Additional Member Details */}
-              {member.lastContribution && (
+              {member.lastContribution !== undefined && member.lastContribution > 0n && (
                 <div className="mt-3 text-xs text-gray-500">
                   Last contribution: {new Date(Number(member.lastContribution) / 1000000).toLocaleDateString()}
                 </div>

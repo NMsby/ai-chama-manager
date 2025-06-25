@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { User, UserStats, VerificationLevel } from '../types/icp';
 import { userService } from '../services/userService';
+import { set } from 'date-fns';
+import { Principal } from '@dfinity/principal';
 
 interface UserProfileProps {
   userId?: string; // If provided, shows other user's profile (read-only)
@@ -31,27 +33,77 @@ const UserProfile: React.FC<UserProfileProps> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (userId) {
-      loadUserProfile(userId);
-    } else if (currentUser) {
-      setUser(currentUser);
-      updateFormData(currentUser);
-      if (showStats) {
-        loadUserStats();
+    const loadProfileData = async () => {
+      try {
+        setLoading(true);
+
+        console.log('🔵 UserProfile render state:', {
+          authLoading,
+          loading,
+          currentUser: !!currentUser,
+          user: !!user,
+          userStats: !!userStats,
+          userId,
+          showStats
+        });
+
+        if (userId) {
+          console.log('🔵 Loading OTHER user profile for ID:', userId);
+          setIsOwnProfile(false);
+          await loadUserProfile(userId);
+        } else if (currentUser) {
+          console.log('🔵 Loading profile for current user:', currentUser.name);
+          setIsOwnProfile(true);
+          setUser(currentUser);
+          updateFormData(currentUser);
+
+          if (showStats) {
+            console.log('🔵 Loading user statistics...');
+            try {
+              await loadUserStats();
+              console.log('🟢 User statistics loaded successfully');
+            } catch (error) {
+              console.error('🔴 Failed to load user statistics:', error);
+              // Only fail the profile load if user stats are critical
+              setUserStats(null);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('🔴 Failed to load user profile data:', error);
+        setUser(null);
+      } finally {
+        setLoading(false); // Ensure loading state is reset
       }
-    }
-  }, [userId, currentUser]);
+    };
+
+    loadProfileData();
+  }, [userId, currentUser, showStats]);
 
   const loadUserProfile = async (targetUserId: string) => {
     try {
       setLoading(true);
-      // In a real implementation, convert string to Principal
-      // const principal = Principal.fromText(targetUserId);
-      // const profile = await userService.getUserById(principal);
-      // setUser(profile);
-      // setIsOwnProfile(currentUser?.id.toString() === targetUserId);
+      console.log('🔵 Loading profile for user ID:', targetUserId);
+
+      // Convert string back to Principal
+      const principalId = Principal.fromText(targetUserId);
+      console.log('🔵 Converted to Principal:', principalId.toString());
+
+      // Fetch user profile by ID
+      const targetUser = await userService.getUserById(principalId);
+      console.log('🔵 Fetched user:', targetUser);
+
+      if (targetUser) {
+        setUser(targetUser);
+        updateFormData(targetUser);
+        console.log('🟢 User profile loaded successfully');
+      } else {
+        console.log('🟡 No user found for ID:', targetUserId);
+        setUser(null);
+      }      
     } catch (error) {
-      console.error('Failed to load user profile:', error);
+      console.error('🔴 Failed to load user profile:', error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -59,10 +111,21 @@ const UserProfile: React.FC<UserProfileProps> = ({
 
   const loadUserStats = async () => {
     try {
+      console.log('🔵 Calling userService.getUserStats()...');
       const stats = await userService.getUserStats();
-      setUserStats(stats);
+      console.log('🔵 getUserStats result:', stats);
+
+      if (stats) {
+        setUserStats(stats);
+        console.log('🟢 User stats set successfully');
+      } else {
+        console.log('🟡 No user stats returned, setting null');
+        setUserStats(null);
+      }
     } catch (error) {
       console.error('Failed to load user stats:', error);
+      setUserStats(null);
+      throw error; // Re-throw to be caught by the outer try-catch
     }
   };
 
@@ -107,17 +170,30 @@ const UserProfile: React.FC<UserProfileProps> = ({
   };
 
   const handleVerification = async (level: VerificationLevel) => {
+    console.log(`🔵 Starting ${level} verification...`);
     setIsVerifying(true);
     
     try {
+      console.log(`🔵 Calling verifyUser from useAuth hook...`);
       const verifiedUser = await verifyUser(level);
+      console.log('🔵 verifyUser result:', verifiedUser);
+
       if (verifiedUser) {
+        console.log('🟢 Verification successful, updating user state...');
         setUser(verifiedUser);
         setSuccessMessage(`Account verified at ${level} level!`);
         setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        console.log('🔴 Verification returned null');
+        setSuccessMessage('Verification failed. Please try again.');
+        setTimeout(() => setSuccessMessage(null), 3000);
       }
     } catch (error) {
-      console.error('Verification failed:', error);
+      console.error('🔴 Verification failed:', error);
+      
+      // User-visible error handling
+      setSuccessMessage(`Verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setSuccessMessage(null), 5000);
     } finally {
       setIsVerifying(false);
     }
@@ -132,6 +208,20 @@ const UserProfile: React.FC<UserProfileProps> = ({
   };
 
   const getVerificationBadge = (user: User) => {
+    // Helper function to convert verification level to string
+    const getVerificationLevelString = (level: any): string => {
+      if (typeof level === 'string') {
+        return level; // Already a string (from initial registration)
+      }
+      if (typeof level === 'object' && level !== null) {
+        // Convert variant object to string
+        if ('basic' in level) return 'basic';
+        if ('intermediate' in level) return 'intermediate';
+        if ('advanced' in level) return 'advanced';
+      }
+      return 'basic'; // fallback
+    };
+
     if (!user.isVerified) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -142,6 +232,9 @@ const UserProfile: React.FC<UserProfileProps> = ({
         </span>
       );
     }
+
+    // Convert verification level to string
+    const levelString = getVerificationLevelString(user.verificationLevel);
 
     const levelColors = {
       basic: 'bg-blue-100 text-blue-800',
@@ -156,9 +249,9 @@ const UserProfile: React.FC<UserProfileProps> = ({
     };
 
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${levelColors[user.verificationLevel]}`}>
-        <span className="mr-1">{levelIcons[user.verificationLevel]}</span>
-        {user.verificationLevel.charAt(0).toUpperCase() + user.verificationLevel.slice(1)} Verified
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${levelColors[levelString as keyof typeof levelColors]}`}>
+        <span className="mr-1">{levelIcons[levelString as keyof typeof levelIcons]}</span>
+        {levelString.charAt(0).toUpperCase() + levelString.slice(1)} Verified
       </span>
     );
   };

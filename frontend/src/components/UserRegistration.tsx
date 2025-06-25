@@ -106,7 +106,10 @@ const UserRegistration: React.FC<UserRegistrationProps> = ({
       );
 
       if (user) {
+        console.log('🟢 Registration successful, calling completion callback...');
         onRegistrationComplete?.(user);
+      } else {
+        throw new Error('Registration failed, user not created');
       }
     } catch (error) {
       console.error('Registration failed:', error);
