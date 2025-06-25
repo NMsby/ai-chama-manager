@@ -360,7 +360,20 @@ class ChamaService {
       return await actor.getMyChamas();
     } catch (error) {
       console.error('Failed to get my chamas:', error);
-      return [];
+      throw new Error('Failed to retrieve your chamas');
+    }
+  }
+
+  // Get chamas by creator
+  async getChamasByCreator(creatorId: string): Promise<Chama[]> {
+    try {
+      const actor = await this.getChamaManagementActor();
+      const principal = Principal.fromText(creatorId);
+      const result = await actor.getChamasByCreator(principal);
+      return result;
+    } catch (error) {
+      console.error('Failed to get chamas by creator:', error);
+      throw new Error('Failed to retrieve created chamas');
     }
   }
 
@@ -371,7 +384,7 @@ class ChamaService {
       return await actor.getPublicChamas(filter ? [filter] : []);
     } catch (error) {
       console.error('Failed to get public chamas:', error);
-      return [];
+      throw new Error('Failed to retrieve public chamas');
     }
   }
 
