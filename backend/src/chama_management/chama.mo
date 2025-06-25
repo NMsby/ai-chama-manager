@@ -29,10 +29,73 @@ module {
     
         private var chamaCounter: Nat = 0;
 
+        // Validate chama name
+        private func validateName(name: Text) : Bool {
+            let trimmed = Text.trim(name, #char ' ');
+            Text.size(trimmed) >= 3 and Text.size(trimmed) <= 100
+        };
+
+        // Validate description
+        private func validateDescription(description: Text) : Bool {
+            let trimmed = Text.trim(description, #char ' ');
+            Text.size(trimmed) >= 10 and Text.size(trimmed) <= 500
+        };
+
+        // Validate contribution amount
+        private func validateContributionAmount(amount: Nat) : Bool {
+            amount >= 100 and amount <= 1000000
+        };
+
+        // Validate max members
+        private func validateMaxMembers(maxMembers: Nat) : Bool {
+            maxMembers >= 3 and maxMembers <= 100
+        };
+
+        // Comprehensive validation function
+        private func validateChamaInput(
+            name: Text,
+            description: Text,
+            contributionAmount: Nat,
+            maxMembers: Nat
+        ) : ?Text {
+            if (not validateName(name)) {
+                return ?"Invalid name: must be 3-100 characters";
+            };
+            if (not validateDescription(description)) {
+                return ?"Invalid description: must be 10-500 characters";
+            };
+            if (not validateContributionAmount(contributionAmount)) {
+                return ?"Invalid contribution amount: must be KES 100-1,000,000";
+            };
+            if (not validateMaxMembers(maxMembers)) {
+                return ?"Invalid max members: must be 3-100 members";
+            };
+            null
+        };
+
         // Generate unique chama ID
         private func generateChamaId(name: Text) : ChamaId {
             chamaCounter += 1;
-            "chama_" # Nat.toText(chamaCounter) # "_" # Text.toLowercase(Text.replace(name, #char ' ', "_"))
+
+            // Sanitize name for ID generation
+            let sanitizedName = if (Text.size(name) == 0) {
+                "unnamed_chama"
+            } else {
+                let lowercaseName = Text.toLowercase(name);
+                let spacesReplaced = Text.replace(lowercaseName, #char ' ', "_");
+                let specialCharsRemoved = Text.replace(spacesReplaced, #char '-', "_");
+                // Take first 20 characters to prevent overly long IDs
+                if (Text.size(specialCharsRemoved) > 20) {
+                    let chars = Text.toIter(specialCharsRemoved);
+                    let charArray = Iter.toArray(chars);
+                    let truncatedArray = Array.tabulate<Char>(20, func(i) { charArray[i] });
+                    Text.fromIter(truncatedArray.vals())
+                } else {
+                    specialCharsRemoved
+                }
+            };
+
+            "chama_" # Nat.toText(chamaCounter) # "_" # sanitizedName
         };
 
         // Create new chama
@@ -45,7 +108,77 @@ module {
             chamaType: Types.ChamaType,
             maxMembers: Nat
         ) : ChamaResult {
-            Debug.print("Creating chama: " # name);
+            Debug.print("Creating chama: " # name # " by: " # Principal.toText(creator));
+
+            // Validation Checks
+            
+            // 1. Name validation
+            // Check if name is empty
+            let trimmedName = Text.trim(name, #char ' ');
+            if (Text.size(trimmedName) == 0) {
+                Debug.print("Validation failed: Empty name");
+                return #err(#InvalidData);
+            };
+            // Check if name is too short - minimum 3 characters
+            if (Text.size(trimmedName) < 3) {
+                Debug.print("Validation failed: Name too short");
+                return #err(#InvalidData);
+            };
+            // Check if name is too long - maximum 100 characters
+            if (Text.size(trimmedName) > 100) {
+                Debug.print("Validation failed: Name too long");
+                return #err(#InvalidData);
+            };
+
+            // 2. Description validation
+            // Check if description is empty
+            let trimmedDesc = Text.trim(description, #char ' ');
+            if (Text.size(trimmedDesc) == 0) {
+                Debug.print("Validation failed: Empty description");
+                return #err(#InvalidData);
+            };
+            // Check if description is too short - minimum 10 characters
+            if (Text.size(trimmedDesc) < 10) {
+                Debug.print("Validation failed: Description too short");
+                return #err(#InvalidData);
+            };
+            // Check if description is too long - maximum 500 characters
+            if (Text.size(trimmedDesc) > 500) {
+                Debug.print("Validation failed: Description too long");
+                return #err(#InvalidData);
+            };
+
+            // 3. Contribution amount validation
+            // Check if contribution amount is zero
+            if (contributionAmount == 0) {
+                Debug.print("Validation failed: Zero contribution amount");
+                return #err(#InvalidData);
+            };
+            // Check contribution amount - minimum KES 100, maximum KES 1,000,000 
+            if (contributionAmount < 100) {  // Minimum KES 100
+                Debug.print("Validation failed: Contribution amount too low");
+                return #err(#InvalidData);
+            };
+            if (contributionAmount > 1000000) {  // Maximum KES 1,000,000
+                Debug.print("Validation failed: Contribution amount too high");
+                return #err(#InvalidData);
+            };
+
+            // 4. maxMembers validation
+            // Check if maxMembers is zero
+            if (maxMembers == 0) {
+                Debug.print("Validation failed: Zero max members");
+                return #err(#InvalidData);
+            };
+            // Check maxMembers - minimum 3 members, maximum 100 members
+            if (maxMembers < 3) {  // Minimum 3 members for a group
+                Debug.print("Validation failed: Max members too low");
+                return #err(#InvalidData);
+            };
+            if (maxMembers > 100) {  // Maximum 100 members
+                Debug.print("Validation failed: Max members too high");
+                return #err(#InvalidData);
+            };
 
             let chamaId = generateChamaId(name);
             let now = Time.now();
@@ -64,8 +197,8 @@ module {
 
             let newChama: Chama = {
                 id = chamaId;
-                name = name;
-                description = description;
+                name = trimmedName;
+                description = trimmedDesc;
                 creator = creator;
                 admins = [creator];
                 members = [founderMember];
@@ -134,29 +267,44 @@ module {
                     #err(#NotFound)
                 };
                 case (?existingChama) {
-                    let chama: Chama = {
-                        id = existingChama.id;
-                        name = updatedChama.name;
-                        description = updatedChama.description;
-                        creator = existingChama.creator;
-                        admins = updatedChama.admins;
-                        members = updatedChama.members;
-                        maxMembers = updatedChama.maxMembers;
-                        contributionAmount = updatedChama.contributionAmount;
-                        contributionFrequency = updatedChama.contributionFrequency;
-                        meetingFrequency = updatedChama.meetingFrequency;
-                        chamaType = updatedChama.chamaType;
-                        rules = updatedChama.rules;
-                        treasury = updatedChama.treasury;
-                        createdAt = existingChama.createdAt;
-                        updatedAt = Time.now();
-                        isActive = updatedChama.isActive;
-                        status = updatedChama.status;
-                        settings = updatedChama.settings;
+                    // Validate updated chama data
+                    switch (validateChamaInput(
+                        updatedChama.name,
+                        updatedChama.description,
+                        updatedChama.contributionAmount,
+                        updatedChama.maxMembers
+                    )) {
+                        case (?errorMsg) {
+                            Debug.print("Update validation failed: " # errorMsg);
+                            return #err(#InvalidData);
+                        };
+                        case null {
+                            // Validation passed, proceed with update
+                            let chama: Chama = {
+                                id = existingChama.id;
+                                name = Text.trim(updatedChama.name, #char ' ');
+                                description = Text.trim(updatedChama.description, #char ' ');
+                                creator = existingChama.creator;
+                                admins = updatedChama.admins;
+                                members = updatedChama.members;
+                                maxMembers = updatedChama.maxMembers;
+                                contributionAmount = updatedChama.contributionAmount;
+                                contributionFrequency = updatedChama.contributionFrequency;
+                                meetingFrequency = updatedChama.meetingFrequency;
+                                chamaType = updatedChama.chamaType;
+                                rules = updatedChama.rules;
+                                treasury = updatedChama.treasury;
+                                createdAt = existingChama.createdAt;
+                                updatedAt = Time.now();
+                                isActive = updatedChama.isActive;
+                                status = updatedChama.status;
+                                settings = updatedChama.settings;
+                            };
+                    
+                            chamas.put(id, chama);
+                            #ok(chama)
+                        };
                     };
-            
-                    chamas.put(id, chama);
-                    #ok(chama)
                 };
             };
         };

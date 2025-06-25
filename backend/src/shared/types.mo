@@ -510,6 +510,10 @@ module {
     #AlreadyExists;
     #NotAuthorized;
     #InvalidData;
+    #InvalidName;
+    #InvalidDescription;
+    #InvalidContributionAmount;
+    #InvalidMaxMembers;
     #MaxMembersReached;
     #InsufficientFunds;
     #NotActive;
