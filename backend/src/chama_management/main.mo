@@ -12,10 +12,12 @@ actor ChamaManagement {
   public type ChamaResult = Types.ChamaResult;
   public type ChamaFilter = Types.ChamaFilter;
   public type UserId = Types.UserId;
+  public type JoinRequest = Types.JoinRequest;
+  public type JoinRequestResult = Types.JoinRequestResult;
 
   private let chamaDB = ChamaDB.ChamaDB();
 
-  // Create a new chama
+  // Create a new chama with optional settings
   public shared(msg) func createChama(
     name: Text,
     description: Text,
@@ -27,6 +29,22 @@ actor ChamaManagement {
     let caller = msg.caller;
     Debug.print("Creating chama: " # name # " by: " # Principal.toText(caller));
     chamaDB.createChama(name, description, caller, contributionAmount, contributionFrequency, chamaType, maxMembers)
+  };
+
+  // Create a new chama with custom settings
+  public shared(msg) func createChamaWithSettings(
+    name: Text,
+    description: Text,
+    contributionAmount: Nat,
+    contributionFrequency: Types.ContributionFrequency,
+    chamaType: Types.ChamaType,
+    maxMembers: Nat,
+    isPublic: Bool,
+    requireApprovalForJoining: Bool
+  ) : async ChamaResult {
+    let caller = msg.caller;
+    Debug.print("Creating chama with custom settings: " # name # " by: " # Principal.toText(caller));
+    chamaDB.createChamaWithSettings(name, description, caller, contributionAmount, contributionFrequency, chamaType, maxMembers, isPublic, requireApprovalForJoining)
   };
 
   // Get chama details
@@ -56,7 +74,106 @@ actor ChamaManagement {
   public shared(msg) func joinChama(chamaId: ChamaId) : async ChamaResult {
     let caller = msg.caller;
     Debug.print("User joining chama: " # chamaId);
-    chamaDB.addMember(chamaId, caller)
+
+    switch (chamaDB.getChama(chamaId)) {
+        case null { #err(#NotFound) };
+        case (?chama) {
+            // Check if chama is public
+            if (not chama.settings.isPublic) {
+                Debug.print("Join failed: Private chama");
+                return #err(#NotAuthorized); // Private chama
+            };
+            
+            // Check if approval is required
+            if (chama.settings.requireApprovalForJoining) {
+                Debug.print("Join requires approval, creating request");
+                switch (chamaDB.createJoinRequest(chamaId, caller, null)) {
+                    case (#ok(request)) {
+                        // Return success but indicate approval required
+                        #err(#ApprovalRequired)
+                        // Add as pending member (requires implementation)
+                        // chamaDB.addPendingMember(chamaId, caller)
+                    };
+                    case (#err(error)) {
+                        #err(error)
+                    };
+                }                
+            } else {
+                Debug.print("Direct join allowed");
+                
+                // Add as active member immediately
+                chamaDB.addMember(chamaId, caller)
+            };
+        };
+    };
+  };
+
+  // Join with message
+  public shared(msg) func joinChamaWithMessage(chamaId: ChamaId, message: Text) : async JoinRequestResult {
+      let caller = msg.caller;
+      Debug.print("User joining chama with message: " # chamaId);
+      
+      switch (chamaDB.getChama(chamaId)) {
+          case null { #err(#NotFound) };
+          case (?chama) {
+              if (not chama.settings.isPublic) {
+                  return #err(#PrivateChama);
+              };
+              
+              chamaDB.createJoinRequest(chamaId, caller, ?message)
+          };
+      };
+  };
+
+  // Approve join request (admin only)
+  public shared(msg) func approveJoinRequest(chamaId: ChamaId, userId: UserId) : async ChamaResult {
+      let caller = msg.caller;
+      
+      switch (chamaDB.getChama(chamaId)) {
+          case null { #err(#NotFound) };
+          case (?chama) {
+              let isAdmin = Array.find<UserId>(chama.admins, func(admin) { admin == caller }) != null;
+              if (not isAdmin) {
+                  #err(#NotAuthorized)
+              } else {
+                  chamaDB.approveJoinRequest(chamaId, userId)
+              }
+          };
+      };
+  };
+
+  // Reject join request (admin only)
+  public shared(msg) func rejectJoinRequest(chamaId: ChamaId, userId: UserId) : async Bool {
+      let caller = msg.caller;
+      
+      switch (chamaDB.getChama(chamaId)) {
+          case null { false };
+          case (?chama) {
+              let isAdmin = Array.find<UserId>(chama.admins, func(admin) { admin == caller }) != null;
+              if (not isAdmin) {
+                  false
+              } else {
+                  chamaDB.rejectJoinRequest(chamaId, userId)
+              }
+          };
+      };
+  };
+
+  // Get pending join requests (admin only)
+  public shared(msg) func getPendingJoinRequests(chamaId: ChamaId) : async [JoinRequest] {
+      let caller = msg.caller;
+      
+      switch (chamaDB.getChama(chamaId)) {
+          case null { [] };
+          case (?chama) {
+              let isAdmin = Array.find<UserId>(chama.admins, func(admin) { admin == caller }) != null;
+              if (not isAdmin) {
+                  []
+              } else {
+                  chamaDB.getPendingJoinRequests(chamaId)
+              }
+          };
+      };
   };
 
   // Add member by admin

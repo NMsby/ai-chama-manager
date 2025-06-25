@@ -55,6 +55,7 @@ module {
     creator: UserId;
     admins: [UserId];
     members: [ChamaMember];
+    joinRequests: [JoinRequest];
     maxMembers: Nat;
     contributionAmount: Nat;
     contributionFrequency: ContributionFrequency;
@@ -89,11 +90,32 @@ module {
   };
 
   public type MemberStatus = {
-    #active;
-    #suspended;
-    #inactive;
-    #expelled;
+    #active;        // Currently active member
+    #suspended;     // Temporarily suspended
+    #inactive;      // No contributions for a long time
+    #expelled;      // Removed from the chama
+    #pending;       // New members awaiting approval
+    #rejected;      // Rejected membership requests
   };
+
+  // Join request type
+  public type JoinRequest = {
+      userId: UserId;
+      chamaId: ChamaId;
+      requestedAt: Time.Time;
+      message: ?Text;
+      status: JoinRequestStatus;
+  };
+
+  // Join request status
+  public type JoinRequestStatus = {
+      #pending;
+      #approved;
+      #rejected;
+  };
+
+  // Join request result
+  public type JoinRequestResult = Result.Result<JoinRequest, ChamaError>;
 
   public type ContributionFrequency = {
     #daily;
@@ -517,6 +539,9 @@ module {
     #MaxMembersReached;
     #InsufficientFunds;
     #NotActive;
+    #PrivateChama;                // Private chama access
+    #ApprovalRequired;            // Approval needed to join
+    #AlreadyRequested;            // Join request already exists
   };
 
   public type TransactionError = {

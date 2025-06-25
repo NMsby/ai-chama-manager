@@ -17,6 +17,8 @@ module {
     public type ChamaError = Types.ChamaError;
     public type ChamaFilter = Types.ChamaFilter;
     public type UserId = Types.UserId;
+    public type JoinRequest = Types.JoinRequest;
+    public type JoinRequestResult = Types.JoinRequestResult;
 
     public class ChamaDB() {
         // Primary chama storage
@@ -202,6 +204,7 @@ module {
                 creator = creator;
                 admins = [creator];
                 members = [founderMember];
+                joinRequests = [];
                 maxMembers = maxMembers;
                 contributionAmount = contributionAmount;
                 contributionFrequency = contributionFrequency;
@@ -255,6 +258,147 @@ module {
             #ok(newChama)
         };
 
+        // Create new chama with custom settings
+        public func createChamaWithSettings(
+            name: Text,
+            description: Text,
+            creator: UserId,
+            contributionAmount: Nat,
+            contributionFrequency: Types.ContributionFrequency,
+            chamaType: Types.ChamaType,
+            maxMembers: Nat,
+            isPublic: Bool,
+            requireApprovalForJoining: Bool
+        ) : ChamaResult {
+            Debug.print("Creating chama with settings: " # name # " by: " # Principal.toText(creator));
+
+            // Use the same validation as existing createChama function
+            let trimmedName = Text.trim(name, #char ' ');
+            if (Text.size(trimmedName) == 0) {
+                Debug.print("Validation failed: Empty name");
+                return #err(#InvalidData);
+            };
+            if (Text.size(trimmedName) < 3) {
+                Debug.print("Validation failed: Name too short");
+                return #err(#InvalidData);
+            };
+            if (Text.size(trimmedName) > 100) {
+                Debug.print("Validation failed: Name too long");
+                return #err(#InvalidData);
+            };
+
+            let trimmedDesc = Text.trim(description, #char ' ');
+            if (Text.size(trimmedDesc) == 0) {
+                Debug.print("Validation failed: Empty description");
+                return #err(#InvalidData);
+            };
+            if (Text.size(trimmedDesc) < 10) {
+                Debug.print("Validation failed: Description too short");
+                return #err(#InvalidData);
+            };
+            if (Text.size(trimmedDesc) > 500) {
+                Debug.print("Validation failed: Description too long");
+                return #err(#InvalidData);
+            };
+
+            if (contributionAmount == 0) {
+                Debug.print("Validation failed: Zero contribution amount");
+                return #err(#InvalidData);
+            };
+            if (contributionAmount < 100) {
+                Debug.print("Validation failed: Contribution amount too low");
+                return #err(#InvalidData);
+            };
+            if (contributionAmount > 1000000) {
+                Debug.print("Validation failed: Contribution amount too high");
+                return #err(#InvalidData);
+            };
+
+            if (maxMembers == 0) {
+                Debug.print("Validation failed: Zero max members");
+                return #err(#InvalidData);
+            };
+            if (maxMembers < 3) {
+                Debug.print("Validation failed: Max members too low");
+                return #err(#InvalidData);
+            };
+            if (maxMembers > 100) {
+                Debug.print("Validation failed: Max members too high");
+                return #err(#InvalidData);
+            };
+
+            let chamaId = generateChamaId(trimmedName);
+            let now = Time.now();
+
+            let founderMember: ChamaMember = {
+                userId = creator;
+                joinedAt = now;
+                role = #owner;
+                status = #active;
+                contributionBalance = 0;
+                loanBalance = 0;
+                lastContribution = null;
+                missedContributions = 0;
+            };
+
+            let newChama: Chama = {
+                id = chamaId;
+                name = trimmedName;
+                description = trimmedDesc;
+                creator = creator;
+                admins = [creator];
+                members = [founderMember];
+                joinRequests = [];
+                maxMembers = maxMembers;
+                contributionAmount = contributionAmount;
+                contributionFrequency = contributionFrequency;
+                meetingFrequency = #monthly;
+                chamaType = chamaType;
+                rules = {
+                    minimumContribution = contributionAmount;
+                    latePenalty = contributionAmount / 10;
+                    withdrawalNotice = 7;
+                    quorumPercentage = 60;
+                    loanInterestRate = 0.05;
+                    maxLoanAmount = contributionAmount * 12;
+                    loanRepaymentPeriod = 6;
+                };
+                treasury = {
+                    totalFunds = 0;
+                    availableFunds = 0;
+                    reserveFunds = 0;
+                    loansFunds = 0;
+                    emergencyFunds = 0;
+                    lastUpdated = now;
+                };
+                createdAt = now;
+                updatedAt = now;
+                isActive = true;
+                status = #forming;
+                settings = {
+                    isPublic = isPublic;
+                    allowExternalLoans = false;
+                    requireApprovalForJoining = requireApprovalForJoining;
+                    enableAIRecommendations = true;
+                    notificationPreferences = {
+                        contributionReminders = true;
+                        meetingNotifications = true;
+                        proposalAlerts = true;
+                        loanReminders = true;
+                        aiInsights = true;
+                    };
+                };
+            };
+
+            chamas.put(chamaId, newChama);
+            updateCreatorIndex(creator, chamaId);
+            updateMemberIndex(creator, chamaId);
+            updateTypeIndex(chamaType, chamaId);
+
+            Debug.print("Chama created successfully with ID: " # chamaId);
+            #ok(newChama)
+        };
+
         // Get chama by ID
         public func getChama(id: ChamaId) : ?Chama {
             chamas.get(id)
@@ -287,6 +431,7 @@ module {
                                 creator = existingChama.creator;
                                 admins = updatedChama.admins;
                                 members = updatedChama.members;
+                                joinRequests = updatedChama.joinRequests;
                                 maxMembers = updatedChama.maxMembers;
                                 contributionAmount = updatedChama.contributionAmount;
                                 contributionFrequency = updatedChama.contributionFrequency;
@@ -350,6 +495,7 @@ module {
                                 creator = chama.creator;
                                 admins = chama.admins;
                                 members = updatedMembers;
+                                joinRequests = chama.joinRequests;
                                 maxMembers = chama.maxMembers;
                                 contributionAmount = chama.contributionAmount;
                                 contributionFrequency = chama.contributionFrequency;
@@ -369,6 +515,227 @@ module {
                             #ok(updatedChama)
                         };
                     };
+                };
+            };
+        };
+
+        // Create join request
+        public func createJoinRequest(chamaId: ChamaId, userId: UserId, message: ?Text) : JoinRequestResult {
+            switch (chamas.get(chamaId)) {
+                case null {
+                    #err(#NotFound)
+                };
+                case (?chama) {
+                    // Check if user is already a member
+                    let existingMember = Array.find<ChamaMember>(chama.members, func(member) {
+                        member.userId == userId
+                    });
+                    
+                    switch (existingMember) {
+                        case (?member) {
+                            #err(#AlreadyExists)
+                        };
+                        case null {
+                            // Check if user already has a pending request
+                            let existingRequest = Array.find<JoinRequest>(chama.joinRequests, func(request) {
+                                request.userId == userId and request.status == #pending
+                            });
+                            
+                            switch (existingRequest) {
+                                case (?request) {
+                                    #err(#AlreadyRequested)
+                                };
+                                case null {
+                                    let newRequest: JoinRequest = {
+                                        userId = userId;
+                                        chamaId = chamaId;
+                                        requestedAt = Time.now();
+                                        message = message;
+                                        status = #pending;
+                                    };
+                                    
+                                    let updatedRequests = Array.append(chama.joinRequests, [newRequest]);
+                                    let updatedChama: Chama = {
+                                        id = chama.id;
+                                        name = chama.name;
+                                        description = chama.description;
+                                        creator = chama.creator;
+                                        admins = chama.admins;
+                                        members = chama.members;
+                                        joinRequests = updatedRequests;
+                                        maxMembers = chama.maxMembers;
+                                        contributionAmount = chama.contributionAmount;
+                                        contributionFrequency = chama.contributionFrequency;
+                                        meetingFrequency = chama.meetingFrequency;
+                                        chamaType = chama.chamaType;
+                                        rules = chama.rules;
+                                        treasury = chama.treasury;
+                                        createdAt = chama.createdAt;
+                                        updatedAt = Time.now();
+                                        isActive = chama.isActive;
+                                        status = chama.status;
+                                        settings = chama.settings;
+                                    };
+                                    
+                                    chamas.put(chamaId, updatedChama);
+                                    #ok(newRequest)
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+
+        // Approve join request
+        public func approveJoinRequest(chamaId: ChamaId, userId: UserId) : ChamaResult {
+            switch (chamas.get(chamaId)) {
+                case null {
+                    #err(#NotFound)
+                };
+                case (?chama) {
+                    // Find the pending request using manual search
+                    var requestIndex: ?Nat = null;
+                    var i: Nat = 0;
+                    
+                    for (request in chama.joinRequests.vals()) {
+                        if (request.userId == userId and request.status == #pending) {
+                            requestIndex := ?i;
+                        };
+                        i += 1;
+                    };
+                    
+                    switch (requestIndex) {
+                        case null {
+                            #err(#NotFound)
+                        };
+                        case (?index) {
+                            // Check if chama is at capacity
+                            if (chama.members.size() >= chama.maxMembers) {
+                                return #err(#MaxMembersReached);
+                            };
+                            
+                            // Create new member
+                            let newMember: ChamaMember = {
+                                userId = userId;
+                                joinedAt = Time.now();
+                                role = #member;
+                                status = #active;
+                                contributionBalance = 0;
+                                loanBalance = 0;
+                                lastContribution = null;
+                                missedContributions = 0;
+                            };
+                            
+                            // Update the request status
+                            let updatedRequests = Array.tabulate<JoinRequest>(
+                                chama.joinRequests.size(),
+                                func(i: Nat) : JoinRequest {
+                                    let request = chama.joinRequests[i];
+                                    if (i == index) {
+                                        {
+                                            userId = request.userId;
+                                            chamaId = request.chamaId;
+                                            requestedAt = request.requestedAt;
+                                            message = request.message;
+                                            status = #approved;
+                                        }
+                                    } else {
+                                        request
+                                    }
+                                }
+                            );
+                            
+                            let updatedMembers = Array.append(chama.members, [newMember]);
+                            let updatedChama: Chama = {
+                                id = chama.id;
+                                name = chama.name;
+                                description = chama.description;
+                                creator = chama.creator;
+                                admins = chama.admins;
+                                members = updatedMembers;
+                                joinRequests = updatedRequests;
+                                maxMembers = chama.maxMembers;
+                                contributionAmount = chama.contributionAmount;
+                                contributionFrequency = chama.contributionFrequency;
+                                meetingFrequency = chama.meetingFrequency;
+                                chamaType = chama.chamaType;
+                                rules = chama.rules;
+                                treasury = chama.treasury;
+                                createdAt = chama.createdAt;
+                                updatedAt = Time.now();
+                                isActive = chama.isActive;
+                                status = if (updatedMembers.size() >= 3) #active else #forming;
+                                settings = chama.settings;
+                            };
+                            
+                            chamas.put(chamaId, updatedChama);
+                            updateMemberIndex(userId, chamaId);
+                            #ok(updatedChama)
+                        };
+                    };
+                };
+            };
+        };
+
+        // Reject join request
+        public func rejectJoinRequest(chamaId: ChamaId, userId: UserId) : Bool {
+            switch (chamas.get(chamaId)) {
+                case null { false };
+                case (?chama) {
+                    let updatedRequests = Array.map<JoinRequest, JoinRequest>(
+                        chama.joinRequests,
+                        func(request: JoinRequest) : JoinRequest {
+                            if (request.userId == userId and request.status == #pending) {
+                                {
+                                    userId = request.userId;
+                                    chamaId = request.chamaId;
+                                    requestedAt = request.requestedAt;
+                                    message = request.message;
+                                    status = #rejected;
+                                }
+                            } else {
+                                request
+                            }
+                        }
+                    );
+                    
+                    let updatedChama: Chama = {
+                        id = chama.id;
+                        name = chama.name;
+                        description = chama.description;
+                        creator = chama.creator;
+                        admins = chama.admins;
+                        members = chama.members;
+                        joinRequests = updatedRequests;
+                        maxMembers = chama.maxMembers;
+                        contributionAmount = chama.contributionAmount;
+                        contributionFrequency = chama.contributionFrequency;
+                        meetingFrequency = chama.meetingFrequency;
+                        chamaType = chama.chamaType;
+                        rules = chama.rules;
+                        treasury = chama.treasury;
+                        createdAt = chama.createdAt;
+                        updatedAt = Time.now();
+                        isActive = chama.isActive;
+                        status = chama.status;
+                        settings = chama.settings;
+                    };
+                    
+                    chamas.put(chamaId, updatedChama);
+                    true
+                };
+            };
+        };
+
+        // Get pending join requests for a chama
+        public func getPendingJoinRequests(chamaId: ChamaId) : [JoinRequest] {
+            switch (chamas.get(chamaId)) {
+                case null { [] };
+                case (?chama) {
+                    Array.filter<JoinRequest>(chama.joinRequests, func(request) {
+                        request.status == #pending
+                    })
                 };
             };
         };
@@ -395,6 +762,7 @@ module {
                         creator = chama.creator;
                         admins = Array.filter<UserId>(chama.admins, func(admin) { admin != userId });
                         members = updatedMembers;
+                        joinRequests = chama.joinRequests;
                         maxMembers = chama.maxMembers;
                         contributionAmount = chama.contributionAmount;
                         contributionFrequency = chama.contributionFrequency;
@@ -457,6 +825,7 @@ module {
                         creator = chama.creator;
                         admins = updatedAdmins;
                         members = updatedMembers;
+                        joinRequests = chama.joinRequests;
                         maxMembers = chama.maxMembers;
                         contributionAmount = chama.contributionAmount;
                         contributionFrequency = chama.contributionFrequency;
@@ -489,6 +858,7 @@ module {
                         creator = chama.creator;
                         admins = chama.admins;
                         members = chama.members;
+                        joinRequests = chama.joinRequests;
                         maxMembers = chama.maxMembers;
                         contributionAmount = chama.contributionAmount;
                         contributionFrequency = chama.contributionFrequency;
