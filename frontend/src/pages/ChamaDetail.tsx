@@ -54,8 +54,15 @@ const ChamaDetail: React.FC = () => {
     };
 
     const isOwner = chama && user && chama.creator === user.id;
-    const isAdmin = chama && user && chama.admins.some(admin => admin === user.id);
-    const isMember = chama && user && chama.members.some(member => member.userId === user.id);
+    
+    const isAdmin = chama && user && (
+        chama.creator.toString() === user.id.toString() || 
+        (chama.admins && chama.admins.some((admin: any) => admin.toString() === user.id.toString()))
+    );
+
+    const isMember = chama && user && chama.members.some(member => 
+        member.userId.toString() === user.id.toString()
+    );
 
     if (loading) {
         return (
@@ -122,7 +129,7 @@ const ChamaDetail: React.FC = () => {
                                             {chama.status}
                                         </span>
                                         <span className="text-sm text-gray-500">
-                                            {chama.members.length} / {chama.maxMembers} members
+                                            {chama.members.length} / {Number (chama.maxMembers)} members
                                         </span>
                                         {isOwner && (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
