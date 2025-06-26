@@ -4,6 +4,7 @@ import { Chama, ChamaMember, MemberRole, MemberStatus, UserId } from '../types/i
 import { chamaService } from '../services/chamaService';
 import { userService } from '../services/userService';
 import UserSearch from './UserSearch';
+import { getMemberRoleText, getMemberStatusText } from '../utils/variantUtils';
 
 interface MemberManagementProps {
   chama: Chama;
@@ -190,10 +191,10 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
                         Member ID: {member.userId.toString().substring(0, 8)}...
                       </p>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}>
-                        {member.role}
+                        {getMemberRoleText(member.role)}
                       </span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(member.status)}`}>
-                        {member.status}
+                        {getMemberStatusText(member.status)}
                       </span>
                     </div>
                     <div className="mt-1 flex items-center space-x-4 text-xs text-gray-500">
@@ -222,7 +223,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
                   <div className="flex items-center space-x-2">
                     {/* Role Change Dropdown */}
                     <select
-                      value={member.role}
+                      value={getMemberRoleText(member.role)}
                       onChange={(e) => handleUpdateRole(member.userId, e.target.value as MemberRole)}
                       disabled={loading}
                       className="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
