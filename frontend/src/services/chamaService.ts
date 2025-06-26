@@ -250,6 +250,19 @@ class ChamaService {
     }
   }
 
+  // Get chama
+  async getChama(chamaId: ChamaId): Promise<Chama | null> {
+    try {
+      const actor = await this.getChamaManagementActor();
+      const result = await actor.getChama(chamaId);
+      
+      return result.length > 0 && result[0] !== undefined ? result[0] : null;
+    } catch (error) {
+      console.error('Failed to get chama:', error);
+      throw new Error('Failed to retrieve chama details');
+    }
+  }
+
   // Get chama by ID
   async getChamaById(chamaId: ChamaId): Promise<Chama | null> {
     try {
