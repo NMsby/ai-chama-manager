@@ -8,42 +8,11 @@ import TransactionList from '../components/TransactionList';
 import { chamaService } from '../services/chamaService';
 import { financialService } from '../services/financialService';
 import { Chama, ChamaStatus, ChamaType, Transaction } from '../types/icp';
-
-// Variant Conversion Helpers
-const extractVariantKey = (variantObject: any): string => {
-    if (typeof variantObject === 'string') {
-        return variantObject; // Already a string
-    }
-    if (typeof variantObject === 'object' && variantObject !== null) {
-        const keys = Object.keys(variantObject);
-        return keys.length > 0 ? keys[0] : 'unknown';
-    }
-    return 'unknown';
-};
-
-const getChamaTypeText = (chamaType: any): ChamaType => {
-    const typeKey = extractVariantKey(chamaType);
-    const validTypes: ChamaType[] = ['savings', 'investment', 'microCredit', 'welfare', 'business'];
-    return validTypes.includes(typeKey as ChamaType) ? (typeKey as ChamaType) : 'savings';
-};
-
-const getChamaStatusText = (status: any): ChamaStatus => {
-    const statusKey = extractVariantKey(status);
-    const validStatuses: ChamaStatus[] = ['forming', 'active', 'suspended', 'dissolved'];
-    return validStatuses.includes(statusKey as ChamaStatus) ? (statusKey as ChamaStatus) : 'forming';
-};
-
-const getContributionFrequencyText = (frequency: any): string => {
-    const frequencyKey = extractVariantKey(frequency);
-    const frequencyMap: Record<string, string> = {
-        daily: 'Daily',
-        weekly: 'Weekly',
-        biweekly: 'Bi-weekly',
-        monthly: 'Monthly',
-        quarterly: 'Quarterly',
-    };
-    return frequencyMap[frequencyKey] || 'Monthly';
-};
+import {
+    getChamaTypeText,
+    getChamaStatusText,
+    getContributionFrequencyText
+} from '../utils/variantUtils';
 
 const ChamaDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
