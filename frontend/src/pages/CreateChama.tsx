@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { chamaService } from '../services/chamaService';
 import { Chama, ChamaType, ContributionFrequency } from '../types/icp';
+import { useNavigate } from 'react-router-dom';
 
 interface CreateChamaProps {
     onChamaCreated?: (chama: Chama) => void;
@@ -9,6 +10,8 @@ interface CreateChamaProps {
 }
 
 const CreateChama: React.FC<CreateChamaProps> = ({ onChamaCreated, onCancel }) => {
+    const navigate = useNavigate();
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -135,7 +138,15 @@ const CreateChama: React.FC<CreateChamaProps> = ({ onChamaCreated, onCancel }) =
             );
 
             if (chama) {
-                onChamaCreated?.(chama);
+                console.log('Chama created successfully:', chama);
+
+                // Call the callback if provided
+                if (onChamaCreated) {
+                    onChamaCreated?.(chama);
+                }
+
+                // Navigate to the chama details page
+                navigate(`/chamas/${chama.id}`, { replace: true });
             }
         } catch (error) {
             console.error('Chama creation failed:', error);
