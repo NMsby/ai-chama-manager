@@ -9,6 +9,8 @@ interface TransactionListProps {
     limit?: number;
     showFilters?: boolean;
     title?: string;
+    transactions?: Transaction[];
+    showPagination?: boolean;
     refreshTrigger?: number;
 }
 
