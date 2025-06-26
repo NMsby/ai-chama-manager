@@ -8,6 +8,7 @@ import UserSearch from './UserSearch';
 interface MemberManagementProps {
   chama: Chama;
   onChamaUpdate?: (updatedChama: Chama) => void;
+  onMemberUpdate?: (member: ChamaMember) => void;
   isAdmin?: boolean;
 }
 
