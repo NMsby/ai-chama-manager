@@ -7,7 +7,43 @@ import BalanceDisplay from '../components/BalanceDisplay';
 import TransactionList from '../components/TransactionList';
 import { chamaService } from '../services/chamaService';
 import { financialService } from '../services/financialService';
-import { Chama, Transaction } from '../types/icp';
+import { Chama, ChamaStatus, ChamaType, Transaction } from '../types/icp';
+
+// Variant Conversion Helpers
+const extractVariantKey = (variantObject: any): string => {
+    if (typeof variantObject === 'string') {
+        return variantObject; // Already a string
+    }
+    if (typeof variantObject === 'object' && variantObject !== null) {
+        const keys = Object.keys(variantObject);
+        return keys.length > 0 ? keys[0] : 'unknown';
+    }
+    return 'unknown';
+};
+
+const getChamaTypeText = (chamaType: any): ChamaType => {
+    const typeKey = extractVariantKey(chamaType);
+    const validTypes: ChamaType[] = ['savings', 'investment', 'microCredit', 'welfare', 'business'];
+    return validTypes.includes(typeKey as ChamaType) ? (typeKey as ChamaType) : 'savings';
+};
+
+const getChamaStatusText = (status: any): ChamaStatus => {
+    const statusKey = extractVariantKey(status);
+    const validStatuses: ChamaStatus[] = ['forming', 'active', 'suspended', 'dissolved'];
+    return validStatuses.includes(statusKey as ChamaStatus) ? (statusKey as ChamaStatus) : 'forming';
+};
+
+const getContributionFrequencyText = (frequency: any): string => {
+    const frequencyKey = extractVariantKey(frequency);
+    const frequencyMap: Record<string, string> = {
+        daily: 'Daily',
+        weekly: 'Weekly',
+        biweekly: 'Bi-weekly',
+        monthly: 'Monthly',
+        quarterly: 'Quarterly',
+    };
+    return frequencyMap[frequencyKey] || 'Monthly';
+};
 
 const ChamaDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -52,6 +88,10 @@ const ChamaDetail: React.FC = () => {
             setLoading(false);
         }
     };
+
+    // Convert variants at the top level
+    const chamaStatusText = chama ? getChamaStatusText(chama.status) : 'forming';
+    const chamaTypeText = chama ? getChamaTypeText(chama.chamaType) : 'savings';
 
     const isOwner = chama && user && chama.creator === user.id;
     
@@ -122,11 +162,11 @@ const ChamaDetail: React.FC = () => {
                                     <p className="mt-1 text-sm text-gray-600">{chama.description}</p>
                                     <div className="mt-2 flex items-center space-x-4">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                            chama.status === 'active' ? 'bg-green-100 text-green-800' :
-                                            chama.status === 'forming' ? 'bg-yellow-100 text-yellow-800' :
+                                            chamaStatusText === 'active' ? 'bg-green-100 text-green-800' :
+                                            chamaStatusText === 'forming' ? 'bg-yellow-100 text-yellow-800' :
                                             'bg-gray-100 text-gray-800'
                                         }`}>
-                                            {chama.status}
+                                            {chamaStatusText}
                                         </span>
                                         <span className="text-sm text-gray-500">
                                             {chama.members.length} / {Number (chama.maxMembers)} members
@@ -235,7 +275,27 @@ const ChamaDetail: React.FC = () => {
                     {activeTab === 'settings' && (isOwner || isAdmin) && (
                         <div className="bg-white shadow rounded-lg p-6">
                             <h3 className="text-lg font-medium text-gray-900 mb-4">Chama Settings</h3>
-                            <p className="text-gray-600">Settings management coming soon...</p>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <dt className="text-sm font-medium text-gray-500">Chama Type</dt>
+                                        <dd className="mt-1 text-sm text-gray-900 capitalize">{chamaTypeText}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-sm font-medium text-gray-500">Contribution Frequency</dt>
+                                        <dd className="mt-1 text-sm text-gray-900">{getContributionFrequencyText(chama.contributionFrequency)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-sm font-medium text-gray-500">Status</dt>
+                                        <dd className="mt-1 text-sm text-gray-900 capitalize">{chamaStatusText}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-sm font-medium text-gray-500">Visibility</dt>
+                                        <dd className="mt-1 text-sm text-gray-900">{chama.settings.isPublic ? 'Public' : 'Private'}</dd>
+                                    </div>
+                                </div>
+                                <p className="text-gray-600">Advanced settings management coming soon...</p>
+                            </div>
                         </div>
                     )}
                 </div>
