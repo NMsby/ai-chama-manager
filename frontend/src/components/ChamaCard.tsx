@@ -1,28 +1,44 @@
 // Chama Card Component
 import React from 'react';
 import { Chama, ChamaType, ChamaStatus } from '../types/icp';
+import { 
+    extractVariantKey,
+    getChamaTypeText,
+    getChamaStatusText,
+    getContributionFrequencyText,
+    formatCurrency 
+} from '../utils/variantUtils';
 
 interface ChamaCardProps {
     chama: Chama;
+    currentUserId?: string;
     onJoin?: (chama: Chama) => void;
     onView?: (chama: Chama) => void;
     onEdit?: (chama: Chama) => void;
     isOwner?: boolean;
     isMember?: boolean;
+    showJoinButton?: boolean;
     showActions?: boolean;
 }
 
 const ChamaCard: React.FC<ChamaCardProps> = ({
     chama,
+    currentUserId,
     onJoin,
     onView,
     onEdit,
-    isOwner = false,
-    isMember = false,
+    // isOwner = false,
+    // isMember = false,
     showActions = true,
+    showJoinButton = false
 }) => {
-    const getChamaTypeColor = (type: ChamaType) => {
-        const colors = {
+    // Convert variant objects to strings
+    const chamaTypeText = getChamaTypeText(chama.chamaType);
+    const chamaStatusText = getChamaStatusText(chama.status);
+    const frequencyText = getContributionFrequencyText(chama.contributionFrequency);
+
+    const getChamaTypeColor = (type: string) => {
+        const colors: Record<string, string> = {
             savings: 'bg-blue-100 text-blue-800',
             investment: 'bg-green-100 text-green-800',
             microCredit: 'bg-purple-100 text-purple-800',
@@ -32,8 +48,8 @@ const ChamaCard: React.FC<ChamaCardProps> = ({
         return colors[type] || 'bg-gray-100 text-gray-800';
     };
 
-    const getChamaStatusColor = (status: ChamaStatus) => {
-        const colors = {
+    const getChamaStatusColor = (status: string) => {
+        const colors: Record<string, string> = {
             forming: 'bg-yellow-100 text-yellow-800',
             active: 'bg-green-100 text-green-800',
             suspended: 'bg-red-100 text-red-800',
@@ -42,8 +58,8 @@ const ChamaCard: React.FC<ChamaCardProps> = ({
         return colors[status] || 'bg-gray-100 text-gray-800';
     };
 
-    const getChamaTypeIcon = (type: ChamaType) => {
-        const icons = {
+    const getChamaTypeIcon = (type: string) => {
+        const icons: Record<string, JSX.Element> = {
             savings: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -70,26 +86,22 @@ const ChamaCard: React.FC<ChamaCardProps> = ({
                 </svg>
             ),
         };
-        return icons[type];
+        return icons[type] || icons.savings;
     };    
 
-    const formatCurrency = (amount: bigint) => {
+    const isMember = chama && currentUserId && chama.members.some(member => 
+        member.userId.toString() === currentUserId
+    );
+
+    const isOwner = currentUserId && chama.creator.toString() === currentUserId;
+
+    const formatCurrency = (amount: bigint | number): string => {
+        const numAmount = typeof amount === 'bigint' ? Number(amount) : amount;
         return new Intl.NumberFormat('en-KE', {
             style: 'currency',
             currency: 'KES',
             minimumFractionDigits: 0,
-        }).format(Number(amount));
-    };
-
-    const getContributionFrequencyText = (frequency: string) => {
-        const frequencyMap = {
-            daily: 'Daily',
-            weekly: 'Weekly',
-            biweekly: 'Bi-weekly',
-            monthly: 'Monthly',
-            quarterly: 'Quarterly',
-        };
-        return frequencyMap[frequency as keyof typeof frequencyMap] || frequency;
+        }).format(numAmount);
     };
 
     const membershipProgress = (chama.members.length / Number(chama.maxMembers)) * 100;
@@ -101,12 +113,12 @@ const ChamaCard: React.FC<ChamaCardProps> = ({
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getChamaTypeColor(chama.chamaType)}`}>
-                                {getChamaTypeIcon(chama.chamaType)}
-                                <span className="ml-1 capitalize">{chama.chamaType}</span>
+                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getChamaTypeColor(chamaTypeText)}`}>
+                                {getChamaTypeIcon(chamaTypeText)}
+                                <span className="ml-1 capitalize">{chamaTypeText}</span>
                             </div>
-                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getChamaStatusColor(chama.status)}`}>
-                                <span className="capitalize">{chama.status}</span>
+                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getChamaStatusColor(chamaStatusText)}`}>
+                                <span className="capitalize">{chamaStatusText}</span>
                             </div>
                             {!chama.settings.isPublic && (
                                 <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -132,7 +144,7 @@ const ChamaCard: React.FC<ChamaCardProps> = ({
                             {formatCurrency(chama.contributionAmount)}
                         </div>
                         <div className="text-xs text-gray-500">
-                            {getContributionFrequencyText(chama.contributionFrequency)}
+                            {frequencyText}
                         </div>
                     </div>
                     <div>

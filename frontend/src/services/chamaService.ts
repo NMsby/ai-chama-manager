@@ -199,6 +199,46 @@ const chamaManagementIdlFactory = ({ IDL }: any) => {
 class ChamaService {
   private chamaManagementActor: ChamaManagementActor | null = null;
 
+  // Convert contribution frequency to actor format
+  private convertContributionFrequency(frequency: ContributionFrequency): any {
+    switch (frequency) {
+      case 'daily': return { 'daily': null };
+      case 'weekly': return { 'weekly': null };
+      case 'biweekly': return { 'biweekly': null };
+      case 'monthly': return { 'monthly': null };
+      case 'quarterly': return { 'quarterly': null };
+      default: 
+        console.error('Unknown contribution frequency:', frequency);
+        return { 'monthly': null };
+    }
+  }
+
+  private convertChamaType(type: ChamaType): any {
+    switch (type) {
+      case 'savings': return { 'savings': null };
+      case 'investment': return { 'investment': null };
+      case 'microCredit': return { 'microCredit': null };
+      case 'welfare': return { 'welfare': null };
+      case 'business': return { 'business': null };
+      default:
+        console.error('Unknown chama type:', type);
+        return { 'savings': null };
+    }
+  }
+
+  private convertMemberRole(role: MemberRole): any {
+    switch (role) {
+      case 'owner': return { 'owner': null };
+      case 'admin': return { 'admin': null };
+      case 'treasurer': return { 'treasurer': null };
+      case 'secretary': return { 'secretary': null };
+      case 'member': return { 'member': null };
+      default:
+        console.error('Unknown member role:', role);
+        return { 'member': null };
+    }
+  }
+
   // Get Chama Management Actor
   private async getChamaManagementActor(): Promise<ChamaManagementActor> {
     if (!this.chamaManagementActor) {
@@ -228,13 +268,32 @@ class ChamaService {
     maxMembers: number
   ): Promise<Chama | null> {
     try {
+      console.log('Creating chama with parameters:', {
+        name,
+        description,
+        contributionAmount,
+        contributionFrequency,
+        chamaType,
+        maxMembers
+      });
+
       const actor = await this.getChamaManagementActor();
+
+      // Convert contribution frequency and chama type to actor format
+      const frequencyVariant = this.convertContributionFrequency(contributionFrequency);
+      const typeVariant = this.convertChamaType(chamaType);
+
+      console.log('Converted variants:', {
+        frequencyVariant,
+        typeVariant
+      });
+
       const result = await actor.createChama(
         name,
         description,
         BigInt(contributionAmount),
-        contributionFrequency,
-        chamaType,
+        frequencyVariant,
+        typeVariant,
         BigInt(maxMembers)
       );
       
@@ -247,6 +306,19 @@ class ChamaService {
     } catch (error) {
       console.error('Chama creation error:', error);
       throw error;
+    }
+  }
+
+  // Get chama
+  async getChama(chamaId: ChamaId): Promise<Chama | null> {
+    try {
+      const actor = await this.getChamaManagementActor();
+      const result = await actor.getChama(chamaId);
+      
+      return result.length > 0 && result[0] !== undefined ? result[0] : null;
+    } catch (error) {
+      console.error('Failed to get chama:', error);
+      throw new Error('Failed to retrieve chama details');
     }
   }
 
@@ -360,7 +432,20 @@ class ChamaService {
       return await actor.getMyChamas();
     } catch (error) {
       console.error('Failed to get my chamas:', error);
-      return [];
+      throw new Error('Failed to retrieve your chamas');
+    }
+  }
+
+  // Get chamas by creator
+  async getChamasByCreator(creatorId: string): Promise<Chama[]> {
+    try {
+      const actor = await this.getChamaManagementActor();
+      const principal = Principal.fromText(creatorId);
+      const result = await actor.getChamasByCreator(principal);
+      return result;
+    } catch (error) {
+      console.error('Failed to get chamas by creator:', error);
+      throw new Error('Failed to retrieve created chamas');
     }
   }
 
@@ -371,7 +456,7 @@ class ChamaService {
       return await actor.getPublicChamas(filter ? [filter] : []);
     } catch (error) {
       console.error('Failed to get public chamas:', error);
-      return [];
+      throw new Error('Failed to retrieve public chamas');
     }
   }
 
@@ -419,6 +504,10 @@ class ChamaService {
       if ('MaxMembersReached' in error) return 'Maximum members limit reached';
       if ('InsufficientFunds' in error) return 'Insufficient funds';
       if ('NotActive' in error) return 'Chama is not active';
+      if ('InvalidName' in error) return 'Invalid chama name';
+      if ('InvalidDescription' in error) return 'Invalid description';
+      if ('InvalidContributionAmount' in error) return 'Invalid contribution amount';
+      if ('InvalidMaxMembers' in error) return 'Invalid maximum members';
     }
     return 'An unexpected error occurred';
   }

@@ -9,6 +9,10 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
 import './App.css';
+import ChamaList from './pages/ChamaList';
+import CreateChama from './pages/CreateChama';
+import ChamaDiscovery from './pages/ChamaDiscovery';
+import ChamaDetail from './pages/ChamaDetail';
 
 // Loading component
 const Loading: React.FC = () => (
@@ -113,10 +117,15 @@ const AppContent: React.FC = () => {
                   <Route path="/profile" element={<UserManagement />} />
                   <Route path="/users" element={<UserManagement />} />
                   <Route path="/user-management" element={<UserManagement />} />
-                                    
-                  {/* Placeholder routes for future pages */}
-                  <Route path="/chamas" element={<Dashboard />} />
-                  <Route path="/chamas/:id" element={<Dashboard />} />
+
+                  {/* Chama-related routes */}
+                  <Route path="/chamas" element={<ChamaList />} />
+                  <Route path="/chamas/create" element={<CreateChama />} />
+                  <Route path="/chamas/discover" element={<ChamaDiscovery />} />
+                  <Route path="/chamas/:id" element={<ChamaDetail />} />
+                  <Route path="/chamas/:id/edit" element={<CreateChama />} />
+                  
+                  {/* Placeholder for other routes */}
                   <Route path="/transactions" element={<Dashboard />} />
                   <Route path="/loans" element={<Dashboard />} />
                   <Route path="/governance" element={<Dashboard />} />

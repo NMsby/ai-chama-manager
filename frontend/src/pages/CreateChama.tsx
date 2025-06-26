@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { chamaService } from '../services/chamaService';
 import { Chama, ChamaType, ContributionFrequency } from '../types/icp';
+import { useNavigate } from 'react-router-dom';
 
 interface CreateChamaProps {
     onChamaCreated?: (chama: Chama) => void;
@@ -9,6 +10,8 @@ interface CreateChamaProps {
 }
 
 const CreateChama: React.FC<CreateChamaProps> = ({ onChamaCreated, onCancel }) => {
+    const navigate = useNavigate();
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -123,23 +126,41 @@ const CreateChama: React.FC<CreateChamaProps> = ({ onChamaCreated, onCancel }) =
         setIsSubmitting(true);
 
         try {
+            console.log('Submitting chama creation with data:', formData);
+
             const chama = await chamaService.createChama(
                 formData.name.trim(),
                 formData.description.trim(),
                 parseFloat(formData.contributionAmount),
-                formData.contributionFrequency,
-                formData.chamaType,
+                formData.contributionFrequency as ContributionFrequency,
+                formData.chamaType as ChamaType,
                 parseInt(formData.maxMembers)
             );
 
             if (chama) {
-                onChamaCreated?.(chama);
+                console.log('Chama created successfully:', chama);
+
+                // Call the callback if provided
+                if (onChamaCreated) {
+                    onChamaCreated?.(chama);
+                }
+
+                // Navigate to the chama details page
+                navigate(`/chamas/${chama.id}`, { replace: true });
             }
         } catch (error) {
             console.error('Chama creation failed:', error);
+
+            let errorMessage = 'Failed to create chama. Please try again.';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+            
             setErrors({
-                submit: error instanceof Error ? error.message : 'Failed to create chama. Please try again.'
-            });
+                submit: errorMessage
+            });            
         } finally {
             setIsSubmitting(false);
         }

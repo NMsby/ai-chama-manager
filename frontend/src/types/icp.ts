@@ -103,6 +103,7 @@ export interface Chama {
   name: string;
   description: string;
   creator: UserId;
+  admins: UserId[];
   members: ChamaMember[];
   maxMembers: bigint;
   contributionAmount: bigint;
