@@ -123,12 +123,14 @@ const CreateChama: React.FC<CreateChamaProps> = ({ onChamaCreated, onCancel }) =
         setIsSubmitting(true);
 
         try {
+            console.log('Submitting chama creation with data:', formData);
+
             const chama = await chamaService.createChama(
                 formData.name.trim(),
                 formData.description.trim(),
                 parseFloat(formData.contributionAmount),
-                formData.contributionFrequency,
-                formData.chamaType,
+                formData.contributionFrequency as ContributionFrequency,
+                formData.chamaType as ChamaType,
                 parseInt(formData.maxMembers)
             );
 
@@ -137,9 +139,17 @@ const CreateChama: React.FC<CreateChamaProps> = ({ onChamaCreated, onCancel }) =
             }
         } catch (error) {
             console.error('Chama creation failed:', error);
+
+            let errorMessage = 'Failed to create chama. Please try again.';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+            
             setErrors({
-                submit: error instanceof Error ? error.message : 'Failed to create chama. Please try again.'
-            });
+                submit: errorMessage
+            });            
         } finally {
             setIsSubmitting(false);
         }
