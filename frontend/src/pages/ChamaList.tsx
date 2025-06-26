@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import ChamaCard from '../components/ChamaCard';
 import { chamaService } from '../services/chamaService';
 import { Chama, ChamaFilter } from '../types/icp';
+import { Principal } from '@dfinity/principal';
 
 const ChamaList: React.FC = () => {
     const { user } = useAuth();
@@ -32,11 +33,11 @@ const ChamaList: React.FC = () => {
                     chamas = await chamaService.getMyChamas();
                     break;
                 case 'created':
-                    chamas = await chamaService.getChamasByCreator(user!.id);
+                    chamas = await chamaService.getChamasByCreator(user!.id.toString());
                     break;
                 case 'member':
                     const allMyChamas = await chamaService.getMyChamas();
-                    chamas = allMyChamas.filter(chama => chama.creator !== user!.id);
+                    chamas = allMyChamas.filter(chama => chama.creator.toString() !== user!.id.toString());
                     break;
             }
             
@@ -51,7 +52,7 @@ const ChamaList: React.FC = () => {
 
     const handleJoinChama = async (chama: Chama) => {
         try {
-            await chamaService.addMember(chama.id, user!.id);
+            await chamaService.addMember(chama.id, Principal.fromText(user!.id.toString()));
             await loadMyChamas(); // Refresh the list
             // Show success notification
         } catch (error) {
@@ -73,9 +74,9 @@ const ChamaList: React.FC = () => {
             case 'my-chamas':
                 return myChamas.length;
             case 'created':
-                return myChamas.filter(chama => chama.creator === user?.id).length;
+                return myChamas.filter(chama => chama.creator.toString() === user?.id.toString()).length;
             case 'member':
-                return myChamas.filter(chama => chama.creator !== user?.id).length;
+                return myChamas.filter(chama => chama.creator.toString() !== user?.id.toString()).length;
             default:
                 return 0;
         }
@@ -194,7 +195,7 @@ const ChamaList: React.FC = () => {
                             <ChamaCard
                                 key={chama.id}
                                 chama={chama}
-                                currentUserId={user?.id}
+                                currentUserId={user?.id.toString()}
                                 onJoin={handleJoinChama}
                                 onView={handleViewChama}
                                 onEdit={handleEditChama}
