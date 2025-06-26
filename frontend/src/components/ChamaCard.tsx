@@ -4,23 +4,33 @@ import { Chama, ChamaType, ChamaStatus } from '../types/icp';
 
 interface ChamaCardProps {
     chama: Chama;
+    currentUserId?: string;
     onJoin?: (chama: Chama) => void;
     onView?: (chama: Chama) => void;
     onEdit?: (chama: Chama) => void;
     isOwner?: boolean;
     isMember?: boolean;
+    showJoinButton?: boolean;
     showActions?: boolean;
 }
 
 const ChamaCard: React.FC<ChamaCardProps> = ({
     chama,
+    currentUserId,
     onJoin,
     onView,
     onEdit,
-    isOwner = false,
-    isMember = false,
+    // isOwner = false,
+    // isMember = false,
     showActions = true,
+    showJoinButton = false
 }) => {
+    const isMember = chama && currentUserId && chama.members.some(member => 
+        member.userId.toString() === currentUserId
+    );
+
+     const isOwner = currentUserId && chama.creator.toString() === currentUserId;
+
     const getChamaTypeColor = (type: ChamaType) => {
         const colors = {
             savings: 'bg-blue-100 text-blue-800',
@@ -73,12 +83,13 @@ const ChamaCard: React.FC<ChamaCardProps> = ({
         return icons[type];
     };    
 
-    const formatCurrency = (amount: bigint) => {
+    const formatCurrency = (amount: bigint | number): string => {
+        const numAmount = typeof amount === 'bigint' ? Number(amount) : amount;
         return new Intl.NumberFormat('en-KE', {
             style: 'currency',
             currency: 'KES',
             minimumFractionDigits: 0,
-        }).format(Number(amount));
+        }).format(numAmount);
     };
 
     const getContributionFrequencyText = (frequency: string) => {
