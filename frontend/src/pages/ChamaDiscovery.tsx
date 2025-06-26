@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import ChamaCard from '../components/ChamaCard';
 import { chamaService } from '../services/chamaService';
 import { Chama, ChamaFilter, ChamaType, ChamaStatus } from '../types/icp';
+import { Principal } from '@dfinity/principal';
 
 const ChamaDiscovery: React.FC = () => {
     const { user } = useAuth();
@@ -81,7 +82,8 @@ const ChamaDiscovery: React.FC = () => {
 
     const handleJoinChama = async (chama: Chama) => {
         try {
-            await chamaService.addMember(chama.id, user!.id);
+            // Convert user ID string to Principal
+            await chamaService.addMember(chama.id, Principal.fromText(user!.id.toString()));
             await loadPublicChamas(); // Refresh the list
             // Show success notification
         } catch (error) {
@@ -290,7 +292,7 @@ const ChamaDiscovery: React.FC = () => {
                             <ChamaCard
                                 key={chama.id}
                                 chama={chama}
-                                currentUserId={user?.id}
+                                currentUserId={user?.id.toString()}
                                 onJoin={handleJoinChama}
                                 onView={handleViewChama}
                                 showJoinButton={true}
