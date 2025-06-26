@@ -1,6 +1,13 @@
 // Chama Card Component
 import React from 'react';
 import { Chama, ChamaType, ChamaStatus } from '../types/icp';
+import { 
+    extractVariantKey,
+    getChamaTypeText,
+    getChamaStatusText,
+    getContributionFrequencyText,
+    formatCurrency 
+} from '../utils/variantUtils';
 
 interface ChamaCardProps {
     chama: Chama;
@@ -13,44 +20,6 @@ interface ChamaCardProps {
     showJoinButton?: boolean;
     showActions?: boolean;
 }
-
-// Utility functions to extract variant keys
-const extractVariantKey = (variantObject: any): string => {
-    if (typeof variantObject === 'string') {
-        return variantObject; // Already a string
-    }
-    if (typeof variantObject === 'object' && variantObject !== null) {
-        const keys = Object.keys(variantObject);
-        return keys.length > 0 ? keys[0] : 'unknown';
-    }
-    return 'unknown';
-};
-
-const getChamaTypeText = (chamaType: any): ChamaType => {
-    const typeKey = extractVariantKey(chamaType);
-    // Ensure it's a valid ChamaType
-    const validTypes: ChamaType[] = ['savings', 'investment', 'microCredit', 'welfare', 'business'];
-    return validTypes.includes(typeKey as ChamaType) ? (typeKey as ChamaType) : 'savings';
-};
-
-const getChamaStatusText = (status: any): ChamaStatus => {
-    const statusKey = extractVariantKey(status);
-    // Ensure it's a valid ChamaStatus
-    const validStatuses: ChamaStatus[] = ['forming', 'active', 'suspended', 'dissolved'];
-    return validStatuses.includes(statusKey as ChamaStatus) ? (statusKey as ChamaStatus) : 'forming';
-};
-
-const getContributionFrequencyText = (frequency: any): string => {
-    const frequencyKey = extractVariantKey(frequency);
-    const frequencyMap: Record<string, string> = {
-        daily: 'Daily',
-        weekly: 'Weekly',
-        biweekly: 'Bi-weekly',
-        monthly: 'Monthly',
-        quarterly: 'Quarterly',
-    };
-    return frequencyMap[frequencyKey] || 'Monthly';
-};
 
 const ChamaCard: React.FC<ChamaCardProps> = ({
     chama,
