@@ -86,7 +86,7 @@ const chatbotIdlFactory = ({ IDL }: { IDL: any }) => {
 // Chatbot actor type
 type ChatbotActor = {
   startChatSession(): Promise<string>;
-  sendMessage(sessionId: string, message: string, context?: string): Promise<ChatResponse>;
+  sendMessage(sessionId: string, message: string, context: [] | [string]): Promise<ChatResponse>;
   getChatHistory(sessionId: string): Promise<ChatSession | undefined>;
   getMySessions(): Promise<ChatSession[]>;
   endChatSession(sessionId: string): Promise<boolean>;
@@ -140,6 +140,7 @@ class ChatService {
   async sendMessage(sessionId: string, message: string, context?: string): Promise<ChatResponse> {
     try {
       const actor = await this.getChatbotActor();
+      // Fix: Pass context as optional parameter, not as array
       return await actor.sendMessage(sessionId, message, context ? [context] : []);
     } catch (error) {
       console.error('Failed to send message:', error);
