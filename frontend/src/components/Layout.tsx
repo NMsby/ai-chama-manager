@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import ChatBot from './ChatBot';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [chatOpen, setChatOpen] = useState(false);
 
     const navigation = [
         {
@@ -268,6 +270,44 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         </div>
                     </div>
                 </main>
+
+                {/* Floating Chat Button */}
+                <div className="fixed bottom-6 right-6 z-40">
+                    <button
+                        onClick={() => setChatOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        aria-label="Open AI Chat Assistant"
+                    >
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                        </svg>
+                        {/* Notification dot for new features */}
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    </button>
+                </div>
+
+                {/* Chat Help Tooltip - Optional */}
+                {!chatOpen && (
+                <div className="fixed bottom-20 right-6 bg-white rounded-lg shadow-lg p-3 max-w-xs z-30 border border-gray-200">
+                    <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <p className="text-sm text-gray-700">New! AI Assistant is here to help!</p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Ask about your chamas, contributions, and more...</p>
+                    <button
+                    onClick={() => setChatOpen(true)}
+                    className="text-xs text-blue-600 hover:text-blue-800 mt-1 underline"
+                    >
+                    Try it now →
+                    </button>
+                </div>
+                )}
+
+                {/* Chat Bot Component */}
+                <ChatBot 
+                    isOpen={chatOpen} 
+                    onClose={() => setChatOpen(false)} 
+                />
             </div>
         </div>
     );
