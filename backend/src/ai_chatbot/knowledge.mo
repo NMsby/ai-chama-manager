@@ -1,9 +1,10 @@
 // Chama-Specific Knowledge Base
 import Text "mo:base/Text";
+import Array "mo:base/Array";
 
 module {
   // Chama terminology and definitions
-  public let chamaTerms = [
+  public let chamaTerms : [(Text, Text)] = [
     ("chama", "A savings group where members pool money together for mutual benefit"),
     ("harambee", "A Kenyan tradition of community self-help events"),
     ("merry-go-round", "A rotating savings system where each member receives the pot in turns"),
@@ -14,7 +15,7 @@ module {
   ];
 
   // Common chama questions and answers
-  public let faqResponses = [
+  public let faqResponses : [(Text, Text)] = [
     ("How do I join a chama?", "You can browse public chamas on our platform and send a join request. The chama admin will review and approve your request."),
     ("What is the minimum contribution?", "Each chama sets its own minimum contribution amount. You can see this information in the chama details."),
     ("When can I withdraw my money?", "Withdrawal rules vary by chama. Check your chama's rules for specific withdrawal policies and notice periods."),
@@ -23,7 +24,7 @@ module {
   ];
 
   // Platform navigation help
-  public let navigationHelp = [
+  public let navigationHelp : [(Text, Text)] = [
     ("dashboard", "Your dashboard shows an overview of all your chama activities, balances, and recent transactions."),
     ("my chamas", "View all chamas you're a member of, including those you've created and joined."),
     ("create chama", "Start a new savings group by setting up contribution rules, member limits, and group settings."),
@@ -32,7 +33,7 @@ module {
   ];
 
   // Financial guidance
-  public let financialTips = [
+  public let financialTips : [Text] = [
     "Set up automatic reminders for your contribution dates",
     "Track your savings goals using our analytics dashboard",
     "Consider diversifying across multiple chamas for different goals",
@@ -41,8 +42,8 @@ module {
   ];
 
   // Function to search knowledge base
-  public func searchKnowledge(query: Text) : ?Text {
-    let lowerQuery = Text.toLowercase(query);
+  public func searchKnowledge(searchQuery: Text) : ?Text {
+    let lowerQuery = Text.toLowercase(searchQuery);
     
     // Search chama terms
     for ((term, definition) in chamaTerms.vals()) {
@@ -51,10 +52,11 @@ module {
       };
     };
 
-    // Search FAQ
+    // Search FAQ - fix the nested function call
     for ((question, answer) in faqResponses.vals()) {
-      if (Text.contains(Text.toLowercase(question), #text lowerQuery) or 
-          Text.contains(lowerQuery, #text Text.toLowercase(question))) {
+      let lowerQuestion = Text.toLowercase(question);
+      if (Text.contains(lowerQuestion, #text lowerQuery) or 
+          Text.contains(lowerQuery, #text lowerQuestion)) {
         return ?answer;
       };
     };
@@ -71,7 +73,7 @@ module {
 
   // Get random financial tip
   public func getFinancialTip() : Text {
-    // Simple rotation through tips (in a real implementation, you'd use proper randomization)
+    // Simple rotation through tips
     financialTips[0]
   };
 }
