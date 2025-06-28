@@ -3,6 +3,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { Principal } from '@dfinity/principal';
 import { User, AuthState, VerificationLevel } from '../types/icp';
 import { authService } from '../services/auth';
+import { chatService } from '../services/chatService';
 
 interface AuthContextType extends AuthState {
   login: () => Promise<boolean>;
