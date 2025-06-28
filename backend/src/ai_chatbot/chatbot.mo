@@ -9,6 +9,7 @@ import Iter "mo:base/Iter";
 import Debug "mo:base/Debug";
 import Int "mo:base/Int";
 import Nat "mo:base/Nat";
+import AIService "./ai_service";
 
 module {
   public type ChatMessage = {
@@ -156,100 +157,103 @@ module {
     // Generate AI response based on user input
     private func generateAIResponse(userMessage: Text, context: ?Text) : async ChatResponse {
       let lowerMessage = Text.toLowercase(userMessage);
-
-      // Simple intent recognition
+      
+      // Check if this is a simple greeting or help request (handle locally)
       if (Text.contains(lowerMessage, #text "hello") or Text.contains(lowerMessage, #text "hi")) {
         return {
           message = "Hello! I'm your Chama AI assistant. I can help you with your savings group activities, check balances, answer questions about contributions, and guide you through the platform. How can I assist you today?";
-          suggestions = [
-            "Check my contribution status",
-            "Show my chama balance",
-            "When is my next meeting?",
-            "How do I make a contribution?"
-          ];
+          suggestions = AIService.generateSuggestions(userMessage, []);
           requiresData = false;
           dataType = null;
-        };
-      };
-
-      if (Text.contains(lowerMessage, #text "contribution") or Text.contains(lowerMessage, #text "contribute")) {
-        return {
-          message = "I can help you with contributions! You can check your contribution status, make new contributions, or see your contribution history. What would you like to know about contributions?";
-          suggestions = [
-            "Check my contribution status",
-            "How to make a contribution",
-            "View contribution history",
-            "Set contribution reminders"
-          ];
-          requiresData = true;
-          dataType = ?"contributions";
-        };
-      };
-
-      if (Text.contains(lowerMessage, #text "balance") or Text.contains(lowerMessage, #text "money")) {
-        return {
-          message = "I can show you your chama balances and financial information. Let me fetch your current balance data.";
-          suggestions = [
-            "Show detailed breakdown",
-            "Compare with last month",
-            "Show all chamas",
-            "Download statement"
-          ];
-          requiresData = true;
-          dataType = ?"balance";
-        };
-      };
-
-      if (Text.contains(lowerMessage, #text "chama") and Text.contains(lowerMessage, #text "create")) {
-        return {
-          message = "I can guide you through creating a new chama! Creating a chama involves setting up the group details, contribution rules, and member management. Would you like me to walk you through the process?";
-          suggestions = [
-            "Start chama creation",
-            "Learn about chama types",
-            "View chama templates",
-            "Requirements for creating"
-          ];
-          requiresData = false;
-          dataType = null;
-        };
-      };
-
-      if (Text.contains(lowerMessage, #text "meeting") or Text.contains(lowerMessage, #text "schedule")) {
-        return {
-          message = "I can help you with chama meetings! I can show you upcoming meetings, help schedule new ones, or provide meeting agendas.";
-          suggestions = [
-            "Show upcoming meetings",
-            "Schedule new meeting",
-            "View past meetings",
-            "Get meeting reminders"
-          ];
-          requiresData = true;
-          dataType = ?"meetings";
         };
       };
 
       if (Text.contains(lowerMessage, #text "help") or Text.contains(lowerMessage, #text "what can you do")) {
         return {
           message = "I'm your Chama AI assistant! I can help you with:\n\n• Check contribution status and balances\n• Guide you through chama creation\n• Show meeting schedules\n• Answer questions about platform features\n• Provide financial insights\n• Help with member management\n\nWhat would you like to explore?";
-          suggestions = [
-            "Check my contributions",
-            "Show my chamas",
-            "Platform tour",
-            "Financial insights"
-          ];
+          suggestions = AIService.generateSuggestions(userMessage, []);
           requiresData = false;
           dataType = null;
         };
       };
 
-      // Default response for unrecognized queries
+      // For complex queries, we'll use enhanced local responses
+      let topics = AIService.extractTopics(userMessage);
+      let (needsData, dataType) = AIService.requiresUserData(userMessage);
+      
+      // Enhanced local responses based on topics
+      if (Text.contains(lowerMessage, #text "contribution") or Text.contains(lowerMessage, #text "contribute")) {
+        return {
+          message = "I can help you with contributions! You can check your contribution status, make new contributions, view your history, or set up reminders. Contributions are the backbone of any successful chama - regular payments help build trust and grow your savings together.";
+          suggestions = AIService.generateSuggestions(userMessage, topics);
+          requiresData = needsData;
+          dataType = if (needsData) { dataType } else { null };
+        };
+      };
+
+      if (Text.contains(lowerMessage, #text "balance") or Text.contains(lowerMessage, #text "money")) {
+        return {
+          message = "I can show you your chama balances and financial information. This includes your individual contributions, the group's treasury balance, and any loans or withdrawals. Keeping track of your finances helps you plan better and stay committed to your savings goals.";
+          suggestions = AIService.generateSuggestions(userMessage, topics);
+          requiresData = needsData;
+          dataType = if (needsData) { dataType } else { null };
+        };
+      };
+
+      if (Text.contains(lowerMessage, #text "chama")) {
+        if (Text.contains(lowerMessage, #text "create")) {
+          return {
+            message = "Creating a chama is exciting! You'll need to set up group details like contribution amounts, meeting frequency, and member rules. A well-structured chama with clear rules helps prevent conflicts and ensures everyone benefits. Would you like me to guide you through the creation process?";
+            suggestions = [
+              "Start chama creation wizard",
+              "Learn about contribution rules",
+              "See chama templates",
+              "Member management tips"
+            ];
+            requiresData = false;
+            dataType = null;
+          };
+        } else {
+          return {
+            message = "Chamas are the heart of community savings in Kenya! Whether you want to join an existing group or start your own, I can help you navigate the platform and understand how chamas work. What specific aspect of chamas interests you?";
+            suggestions = AIService.generateSuggestions(userMessage, topics);
+            requiresData = needsData;
+            dataType = if (needsData) { dataType } else { null };
+          };
+        };
+      };
+
+      if (Text.contains(lowerMessage, #text "meeting") or Text.contains(lowerMessage, #text "schedule")) {
+        return {
+          message = "Chama meetings are essential for group decision-making and maintaining member relationships. I can help you view upcoming meetings, schedule new ones, or check past meeting decisions. Regular meetings keep everyone informed and engaged!";
+          suggestions = AIService.generateSuggestions(userMessage, topics);
+          requiresData = needsData;
+          dataType = if (needsData) { dataType } else { null };
+        };
+      };
+
+      if (Text.contains(lowerMessage, #text "loan")) {
+        return {
+          message = "Chama loans can help members access credit for personal or business needs. I can explain loan terms, help you apply, or check your loan status. Remember, timely repayments help maintain trust and keep the chama strong for everyone!";
+          suggestions = [
+            "Check loan eligibility",
+            "View loan terms",
+            "Apply for loan",
+            "Check repayment schedule"
+          ];
+          requiresData = needsData;
+          dataType = if (needsData) { dataType } else { null };
+        };
+      };
+
+      // Default enhanced response for unrecognized queries
       {
-        message = "I understand you're asking about '" # userMessage # "'. While I'm learning to better understand all queries, I can definitely help you with chama management, contributions, balances, and platform navigation. Could you please rephrase your question or choose from the suggestions below?";
+        message = "I understand you're asking about '" # userMessage # "'. As your chama assistant, I'm here to help with savings groups, contributions, financial planning, and platform navigation. Could you tell me more about what specific aspect you'd like help with?";
         suggestions = [
-          "Check my contributions",
-          "Show chama balance",
-          "View my chamas",
-          "Get help with platform"
+          "Tell me about chamas",
+          "Check my account status", 
+          "Platform features",
+          "Financial guidance"
         ];
         requiresData = false;
         dataType = null;
