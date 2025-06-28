@@ -16,6 +16,10 @@
       "main": "src/ai_analytics/main.mo",
       "type": "motoko"
     },
+    "ai_chatbot": {
+      "main": "src/ai_chatbot/main.mo",
+      "type": "motoko"
+    },
     "governance": {
       "main": "src/governance/main.mo",
       "type": "motoko"

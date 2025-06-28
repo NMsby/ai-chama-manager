@@ -6,6 +6,7 @@ import { User, AuthState, VerificationLevel } from '../types/icp';
 import { userService } from './userService';
 import { chamaService } from './chamaService';
 import { financialService } from './financialService';
+import { chatService } from './chatService';
 
 class AuthService {
   private authClient: AuthClient | null = null;
@@ -113,6 +114,9 @@ class AuthService {
 
       // Reset financial service actor
       financialService.resetActor();
+
+      // Reset chatService actor
+      chatService.resetActor();
     } catch (error) {
       console.error('Failed to reset service actors:', error);
     }
